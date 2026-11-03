@@ -13,6 +13,8 @@ from .db import connect
 
 
 def cmd_fetch(args, cfg, conn):
+    import httpx
+
     from .github import GitHubClient, RateLimited, fetch_issues
 
     token = os.environ.get("GITHUB_TOKEN")
@@ -24,6 +26,11 @@ def cmd_fetch(args, cfg, conn):
     except RateLimited as e:
         print(f"stopped: {e} Progress so far is saved.")
         return 2
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:300]
+        print(f"error: GitHub returned {e.response.status_code} for {e.request.url}\n{body}")
+        print("Progress so far is saved; re-run to resume.")
+        return 1
     print(
         f"done: {result['issues']} issues, {result['comments']} first comments fetched, "
         f"{result['requests']} API requests"
