@@ -119,36 +119,79 @@ end-to-end run that stores records.
 
 ## Results
 
-First real run: 20 recent `supabase/supabase` issues, `claude-haiku-5-5` at effort `low`,
-prompt `v1`, run by Theo on his own machine.
+First real run: the 20 newest `supabase/supabase` issues, `claude-haiku-5-5` at effort
+`low`, prompt `v1`, run on Theo's machine on 2026-11-03.
 
 | Metric | Value |
 | --- | --- |
+| Issues fetched | 300 (+ 238 first comments, 265 API requests with a token) |
+| Docs indexed | 590 files, 5,849 chunks |
 | Issues triaged | 20 |
 | Valid records (passed all output checks) | 20 / 20 |
-| Average cost per issue | $0.00084 |
-| Total cost (20 issues) | about $0.017 |
-| Average latency per issue | 5.7 s |
-| Prompt cache | `cache_read` > 0 from the second issue on |
+| Total cost | $0.0168 |
+| Average cost per issue | $0.00084 (min $0.00042, max $0.00194) |
+| Average latency per issue | 5.7 s (3.1–9.1 s) |
+| Prompt cache | 1,635 tokens written on issue 1, read on every later call |
+| Needed a second API call | 2 of 20 (retry after a failed check; both then passed) |
 
-`triage docs` indexes the current Supabase guides (590 files) into 5,849 chunks in about
-3 seconds.
+Per issue (type / area / severity / needs-engineer are the model's answers, not checked
+against labels yet):
 
-What the first run showed, by reading the output (not yet measured against labels):
+| Issue | Type | Area | Severity | Engineer | Conf. | Cost ($) | Latency (s) | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| [52682](https://github.com/supabase/supabase/issues/52682) | bug | other | low | yes | 0.85 | 0.00084 | 9.1 | cache write (first call) |
+| [52657](https://github.com/supabase/supabase/issues/52657) | bug | platform | high | yes | 0.8 | 0.00062 | 6.4 |  |
+| [52636](https://github.com/supabase/supabase/issues/52636) | bug | database | high | yes | 0.8 | 0.00129 | 7.6 | 2 API calls |
+| [52607](https://github.com/supabase/supabase/issues/52607) | bug | studio | medium | yes | 0.85 | 0.00075 | 5.1 |  |
+| [52604](https://github.com/supabase/supabase/issues/52604) | bug | studio | medium | yes | 0.85 | 0.00069 | 4.3 |  |
+| [52593](https://github.com/supabase/supabase/issues/52593) | bug | studio | low | yes | 0.85 | 0.00055 | 4.2 |  |
+| [52587](https://github.com/supabase/supabase/issues/52587) | bug | database | medium | yes | 0.6 | 0.00092 | 6.7 |  |
+| [52582](https://github.com/supabase/supabase/issues/52582) | docs | docs | low | no | 0.8 | 0.00042 | 3.5 |  |
+| [52571](https://github.com/supabase/supabase/issues/52571) | bug | studio | medium | yes | 0.8 | 0.00065 | 3.1 |  |
+| [52565](https://github.com/supabase/supabase/issues/52565) | bug | database | high | yes | 0.6 | 0.00088 | 6.8 |  |
+| [52554](https://github.com/supabase/supabase/issues/52554) | bug | studio | medium | yes | 0.7 | 0.00056 | 4.6 |  |
+| [52550](https://github.com/supabase/supabase/issues/52550) | other | database | medium | yes | 0.6 | 0.00102 | 6.5 |  |
+| [52547](https://github.com/supabase/supabase/issues/52547) | docs | cli | medium | yes | 0.7 | 0.00072 | 4.8 | duplicate of [52546](https://github.com/supabase/supabase/issues/52546) |
+| [52546](https://github.com/supabase/supabase/issues/52546) | docs | cli | medium | yes | 0.7 | 0.00085 | 5.4 |  |
+| [52541](https://github.com/supabase/supabase/issues/52541) | bug | database | high | yes | 0.7 | 0.00106 | 7.6 |  |
+| [52538](https://github.com/supabase/supabase/issues/52538) | bug | platform | medium | yes | 0.6 | 0.00089 | 6.0 |  |
+| [52537](https://github.com/supabase/supabase/issues/52537) | bug | platform | high | yes | 0.6 | 0.00072 | 4.8 |  |
+| [52520](https://github.com/supabase/supabase/issues/52520) | feature | studio | low | yes | 0.85 | 0.00061 | 3.2 |  |
+| [52484](https://github.com/supabase/supabase/issues/52484) | bug | auth | medium | yes | 0.7 | 0.00078 | 5.8 |  |
+| [52479](https://github.com/supabase/supabase/issues/52479) | bug | studio | medium | yes | 0.9 | 0.00194 | 8.8 | 2 API calls |
 
-- `needs_engineer` was true for 19 of 20 issues, which looks like over-flagging.
-- Retrieval sometimes returned unrelated docs ([supabase#52554](https://github.com/supabase/supabase/issues/52554), [supabase#52582](https://github.com/supabase/supabase/issues/52582), [supabase#52537](https://github.com/supabase/supabase/issues/52537)). BM25 always returns
-  its top 5, even when none of them is a good match.
-- [supabase#52546](https://github.com/supabase/supabase/issues/52546) and [supabase#52547](https://github.com/supabase/supabase/issues/52547) are duplicates of each other; duplicate detection comes in Milestone 2.
+What reading the output showed (not yet measured against labels):
 
-These are the starting points for Milestone 2, which adds a labelled set and a scorecard
-(type/area accuracy, needs-engineer agreement, retrieval hit rate, duplicate precision).
+- **`needs_engineer` over-flags**: true for 19 of 20. Only the outdated-blog-figures issue
+  was marked false.
+- **Weak retrieval for about half the issues.** For issues about the dashboard, the
+  platform, or the repo itself (for example [52554](https://github.com/supabase/supabase/issues/52554),
+  [52593](https://github.com/supabase/supabase/issues/52593),
+  [52657](https://github.com/supabase/supabase/issues/52657),
+  [52537](https://github.com/supabase/supabase/issues/52537),
+  [52582](https://github.com/supabase/supabase/issues/52582)), the top 5 were unrelated.
+  The same generic sections keep appearing (`#getting-help`, `#resources`, `#overview`).
+  In every such case the draft correctly cited none of them, but they still cost tokens.
+- **Drafts claim actions that did not happen**: "I've passed this to the team" (several),
+  and on [52604](https://github.com/supabase/supabase/issues/52604) "We can reproduce the
+  core problem". The tool forwards nothing and reproduces nothing, so prompt `v2` must
+  forbid this.
+- **Duplicates handled consistently but not detected**:
+  [52546](https://github.com/supabase/supabase/issues/52546) and
+  [52547](https://github.com/supabase/supabase/issues/52547) have the same title and got the
+  same type/area/severity. Duplicate detection comes in Milestone 2.
+- Summaries sometimes repeat project references and request IDs from the issue. These are
+  already public in the issue, but a reviewer should notice them.
+
+Milestone 2 turns these into numbers: a labelled set and a scorecard with type/area
+accuracy, needs-engineer agreement, retrieval hit rate and duplicate precision.
 
 ## Limitations
 
 - Retrieval is keyword-based (BM25) with no relevance cut-off yet, so weak matches still
   reach the prompt and can be cited.
 - `needs_engineer` currently leans towards true (19/20 in the first run).
+- Drafts can claim actions the tool never takes ("I've passed this to the team").
 - Doc anchors are generated from headings in GitHub style. Most match the live site, but
   some generated anchors may not.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.
