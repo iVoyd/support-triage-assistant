@@ -8,10 +8,9 @@ is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: all three milestones are built. The assistant has been run on real Supabase issues,
-scored against 62 labelled issues with prompts v1–v3, and its v3 drafts have had a first
-human review (see "Results"). Prompt v4, which targets the review findings, is written but
-not yet measured. See [SPEC.md](SPEC.md).
+Status: all three milestones are done. The assistant has been run on real Supabase issues,
+scored against 62 labelled issues with prompts v1–v4, and its drafts have been reviewed
+twice (see "Results"). Prompt v4 is the default. See [SPEC.md](SPEC.md).
 
 ![triage run on 20 real issues](docs/screenshots/run.svg)
 
@@ -274,10 +273,13 @@ every scorecard metric, and end-to-end runs that store records.
 
 ### Scorecard
 
-Full tables:
-- [eval/SCORECARD.md](eval/SCORECARD.md): prompt v3, current labels.
-- [eval/SCORECARD-v2.md](eval/SCORECARD-v2.md) and [eval/SCORECARD-v1.md](eval/SCORECARD-v1.md):
-  prompts v2 and v1, scored on the labels as they were then.
+Full tables in `eval/`:
+- [SCORECARD.md](eval/SCORECARD.md): prompt v4, the default.
+- [SCORECARD-v3.md](eval/SCORECARD-v3.md): prompt v3.
+- [SCORECARD-v2-relabelled.md](eval/SCORECARD-v2-relabelled.md): the v2 records re-scored on
+  the current labels.
+- [SCORECARD-v2.md](eval/SCORECARD-v2.md) and [SCORECARD-v1.md](eval/SCORECARD-v1.md): prompts
+  v2 and v1, scored on the labels as they were then.
 
 All runs: 62 labelled issues, 2026-11-03, `claude-haiku-5-5` at effort `low`.
 
@@ -293,35 +295,45 @@ Neither group is a random sample, so neither enters the error estimate. One of t
 spot-check corrections, the area of 52234, was made after the spot-check, when Theo
 re-checked the row.
 
-| Metric | v1 | v2 | v3 |
+Current labels (v2 re-scored, v3, v4):
+
+| Metric | v2 | v3 | v4 |
 | --- | --- | --- | --- |
-| Type accuracy | 68% | 68% | 82% |
-| Area accuracy | 84% | 79% | 81% |
-| Needs-engineer agreement | 81% | 90% | 90% |
-| Model says engineer / labels say engineer | 77% / 58% | 48% / 58% | 52% / 58% |
+| Type accuracy | 68% | 82% | 84% |
+| Area accuracy | 81% | 81% | 81% |
+| Needs-engineer agreement | 90% | 90% | 90% |
+| Model says engineer / labels say engineer | 48% / 58% | 52% / 58% | 52% / 58% |
 | Duplicate precision@1 / recall | 71% / 80% | same | same |
-| Issues where the model found a relevant doc | – | 18 of 62 (29%) | 18 of 62 (29%) |
-| Valid outputs | 61 / 62 | 60 / 62 | 61 / 62 |
-| Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s | $0.00079 / 5.5 s |
+| Issues where the model found a relevant doc | 18 of 62 | 18 of 62 | 18 of 62 |
+| Valid outputs | 60 / 62 | 61 / 62 | 57 / 62 |
+| Avg cost / latency per issue | $0.00083 / 5.7 s | $0.00079 / 5.5 s | $0.00086 / 5.8 s |
 
-The v1 and v2 columns were scored before 12 labels changed (11 type re-checks under the v3
-rule, plus the area of 52234). The v3 gain in type accuracy therefore mixes the prompt change
-with the relabelling; `eval/CHANGELOG.md` has the like-for-like comparison once v2 is
-re-scored on the current labels. Duplicate precision and recall do not depend on the prompt.
+Re-scoring v2 on today's labels (no API calls) shows the v3 type gain comes from the prompt,
+not the relabelling. Duplicate precision and recall do not depend on the prompt.
 
-### Human review (prompt v3, 20 drafts)
+On the original labels, v1 had type 68%, area 84%, needs-engineer 81% and called for an
+engineer on 77% of issues (`eval/SCORECARD-v1.md`).
+
+### Human review
 
 ![triage review: one draft](docs/screenshots/review.svg)
 
-| | |
-| --- | --- |
-| Approved as is | 2 (10%) |
-| Approved after edits | 17 |
-| Rejected | 1 |
-| Mean edit distance, edited drafts | 0.47 (word-level, 0 = unchanged, 1 = rewritten) |
+Theo's first review (prompt v3, 20 drafts) and a re-review of the same 20 issues with v4.
+Two issues had no valid v4 draft, so they count as failures:
 
-Almost every draft was usable (19 of 20), but almost none could be sent as written.
-Theo's edits, by kind:
+| Same 20 issues | v3 | v4 |
+| --- | --- | --- |
+| Approved as is | 2 (10%) | 5 (25%) |
+| Approved after edits | 17 | 13 |
+| Rejected | 1 | 0 |
+| No valid draft | 0 | 2 |
+| Mean edit distance, edited drafts | 0.47 | 0.55 |
+| Mean edit distance, all usable drafts | 0.42 | 0.39 |
+
+Edit distance is word-level: 0 = unchanged, 1 = rewritten.
+
+In the v3 review, almost every draft was usable (19 of 20), but almost none could be sent
+as written. Theo's edits, by kind:
 
 1. **Asked for information already in the issue** (about 8 drafts). The screenshot shows
    one: the draft asks for `node -v` when the issue already says Node 22.22.3.
@@ -333,7 +345,18 @@ Theo's edits, by kind:
 4. **Cited or promised a docs link without including it**, 3 drafts.
 5. **Claimed an action it cannot take** ("I've labelled this"), 1 draft.
 
-Prompt v4 targets each of these; see `eval/CHANGELOG.md`.
+Prompt v4 targeted all five. In the re-review:
+- **Fixed:** every draft with a confirmed duplicate now names it, and there were no claimed
+  actions.
+- **Reduced:** talk about its own inputs fell from 5 drafts to 2.
+- **Still open:** asking for information already given (5 drafts). That is the v5 target.
+
+**The cost of v4's stricter checks:** 52582 and 52520 lost their draft. Their v3 drafts
+contained exactly what v4 rejects ("The provided documentation doesn't cover this page",
+"I've labelled this as a feature request"). The v4 draft was apparently sent back and
+failed again on the one retry, and invalid drafts are not offered for review. Overall,
+valid outputs fell from 61 to 57 of 62. The drafts that still needed edits needed bigger
+ones (0.55 vs 0.47).
 
 Labelling rules Theo followed:
 
@@ -355,7 +378,7 @@ Labelling rules Theo followed:
 
   Both are candidate misses, not wrong judgements on candidates the suggester saw.
 
-What the v1 → v2 numbers said (v3 above addresses the type point):
+What the first v1 → v2 comparison said (on the labels as they were then):
 
 - **v2 fixed the over-flagging.** v1 called for an engineer on 77% of issues against 58% in
   the labels; v2 says 48%, slightly under. Agreement went from 81% to 90%.
@@ -494,11 +517,25 @@ The fixed instructions are cached: from the second issue on, each call reads abo
   built.
 - Edit distance is word-level. It shows how much text changed, not whether the change
   mattered.
+- Review decisions were proposed by Claude and confirmed by Theo, not written from scratch
+  by a person. A Claude reviewer may favour drafts that read like Claude's own, and the v4
+  re-review was proposed by a reviewer who knew what v4 was meant to fix.
+- With the v4 checks, a draft that fails twice is stored as invalid and never reaches
+  review (2 of 20 re-review issues). Prompt v5 should show such drafts with their errors
+  instead of dropping them.
 
 ## How this was built
 
 Written with AI assistance (Claude Code) from the spec in `SPEC.md`, and reviewed by Theo
-O'Ferrall. The work was done in three milestone PRs, each tested with recorded fixtures (no
+O'Ferrall.
+
+- **Labels:** suggested by Claude Sonnet 5.5 (`triage label --suggest`) and confirmed by
+  Theo, either fully by hand or by random spot-check (see "Results").
+- **Review decisions:** proposed by Claude and confirmed by Theo. The v3 review went
+  through `triage review`. The v4 re-review was imported in bulk with a one-off script that
+  uses the same `save()` function as `triage review`. So the approval rates and edit
+  distances measure what Claude proposed and Theo accepted. They are not an independent
+  human rewrite. The work was done in three milestone PRs, each tested with recorded fixtures (no
 network in tests). Theo ran the real runs on his own machine: fetching, triage, labelling
 and evaluation. He reviewed the labels himself and set the rules for `needs_engineer` and
 `type`. Each change of rule became a new prompt version, scored against v1 and v2 on the

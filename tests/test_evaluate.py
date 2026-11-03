@@ -137,7 +137,7 @@ def test_evaluate_end_to_end_runs_missing_records_and_writes_scorecard(conn, cfg
     out = tmp_path / "SCORECARD.md"
     write_scorecard(report, out)
     text = out.read_text()
-    assert "model `claude-haiku-5-5`" in text and "prompt `v3`" in text
+    assert "model `claude-haiku-5-5`" in text and f"prompt `{cfg.prompt_version}`" in text
     assert "| Type accuracy | 100% | 1 |" in text
     assert "| **bug** | 1 |" in text
     assert "## Retrieval threshold" in text

@@ -30,7 +30,7 @@ def test_run_stores_records_with_cost_and_retrieval(conn, cfg):
 
     row = conn.execute("SELECT * FROM triage").fetchone()
     assert row["number"] == 40012  # newest untriaged issue first
-    assert row["model"] == "claude-haiku-5-5" and row["prompt_version"] == "v3"
+    assert row["model"] == "claude-haiku-5-5" and row["prompt_version"] == cfg.prompt_version
     assert (row["type"], row["area"], row["severity"]) == ("bug", "auth", "medium")
     assert row["needs_engineer"] == 1
     urls = json.loads(row["retrieved_urls"])
@@ -61,9 +61,9 @@ def test_new_prompt_version_retriages(conn, cfg):
     setup_db(conn, cfg)
     run_triage(conn, cfg, FakeAnthropic("claude_valid.json"), limit=1, log=lambda m: None)
     assert 40012 not in [
-        i["number"] for i in pick_issues(conn, cfg.repo, 20, None, cfg.model, "v3")
+        i["number"] for i in pick_issues(conn, cfg.repo, 20, None, cfg.model, cfg.prompt_version)
     ]
-    assert 40012 in [i["number"] for i in pick_issues(conn, cfg.repo, 20, None, cfg.model, "v4")]
+    assert 40012 in [i["number"] for i in pick_issues(conn, cfg.repo, 20, None, cfg.model, "v9")]
 
 
 def test_min_score_drops_weak_docs(conn, cfg):

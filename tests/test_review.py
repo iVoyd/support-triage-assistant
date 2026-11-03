@@ -168,6 +168,7 @@ def test_cli_review_stats(tmp_path, capsys, cfg):
 def test_like_reviews_the_same_issues_under_a_new_prompt(conn, cfg, tmp_path, capsys):
     from triage.review import reviewed_numbers
 
+    cfg.prompt_version = "v3"
     triaged(conn, cfg, 2)
     review_loop(conn, cfg, 1, ask=lambda _: "a", out=lambda m: None)  # reviews 40012 under v3
     assert reviewed_numbers(conn, cfg.repo, "v3") == [40012]

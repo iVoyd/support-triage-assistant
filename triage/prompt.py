@@ -138,7 +138,7 @@ SYSTEM_V4 = SYSTEM_V3.replace(
     + V4_DRAFT_RULES,
 )
 PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2, "v3": SYSTEM_V3, "v4": SYSTEM_V4}
-DEFAULT_VERSION = "v3"  # v4 becomes the default only if its eval and re-review are better
+DEFAULT_VERSION = "v4"
 
 
 def format_areas(areas: dict[str, str]) -> str:
