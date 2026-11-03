@@ -131,7 +131,8 @@ def test_label_loop_saves_each_answer(conn, cfg, tmp_path):
     out = []
     result = label_loop(conn, cfg, path, ask=lambda _: next(answers), out=out.append)
     assert result == {"confirmed": 1, "remaining": 1}
-    assert any("still missing: needs_engineer" in line for line in out)
+    assert any("still missing: needs_engineer. Type them, e.g. e=y" in line for line in out)
+    assert any(line.startswith("  areas: auth, database") for line in out)
     rows = {r["number"]: r for r in read_labels(path)}
     assert rows["52547"]["confirmed"] == "yes" and rows["52547"]["needs_engineer"] == "no"
     assert rows["52546"]["confirmed"] == ""

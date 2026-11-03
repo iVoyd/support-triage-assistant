@@ -221,6 +221,19 @@ def missing(row: dict) -> list[str]:
     return need
 
 
+def example(row: dict) -> str:
+    parts = []
+    if not row["type"]:
+        parts.append("t=b")
+    if not row["area"]:
+        parts.append("a=other")
+    if not row["needs_engineer"]:
+        parts.append("e=y")
+    if row["duplicate_of"] == "?":
+        parts.append("d=12345 (or d=-)")
+    return " ".join(parts)
+
+
 def show(row: dict, issue: dict | None, out: Callable[[str], None]) -> None:
     out("")
     out(f"#{row['number']} {issue['title'] if issue else row['title']}")
@@ -252,7 +265,10 @@ def label_loop(
 ) -> dict:
     rows = read_labels(path)
     todo = [r for r in rows if r["confirmed"] != "yes"]
-    out(f"{len(rows) - len(todo)} of {len(rows)} rows confirmed. h for help.")
+    areas = ", ".join(cfg.areas)
+    out(f"{len(rows) - len(todo)} of {len(rows)} rows confirmed.")
+    out(HELP)
+    out(f"  areas: {areas}")
     done = 0
     for row in todo:
         issue = conn.execute(
@@ -267,11 +283,21 @@ def label_loop(
                 break
             if answer in ("h", "?"):
                 out(HELP)
+                out(f"  areas: {areas}")
                 continue
             errors = apply_edits(row, answer, list(cfg.areas)) if answer else []
-            errors += [f"still missing: {m}" for m in missing(row)] if not errors else []
+            gaps = missing(row) if not errors else []
             if errors:
                 out("  " + "; ".join(errors))
+                continue
+            if gaps:
+                out(
+                    "  still missing: "
+                    + ", ".join(gaps)
+                    + ". Type them, e.g. "
+                    + example(row)
+                    + "  (s = skip row, h = help)"
+                )
                 continue
             row["confirmed"] = "yes"
             write_labels(path, rows)
