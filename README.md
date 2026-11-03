@@ -236,8 +236,28 @@ suggestions nobody checked.
 | Model says engineer / labels say engineer | 77% / 58% | 48% / 58% |
 | Duplicate precision@1 / recall | 71% / 80% | same (the duplicate check does not depend on the prompt) |
 | Issues where the model found a relevant doc | – | 18 of 62 (29%) |
-| Valid outputs | 61 / 62 | 60 / 62 |
+| Valid outputs | 61 / 62 | 60 / 62 (both failures: a 4-sentence summary after the retry) |
 | Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s |
+
+Labelling rules Theo followed:
+
+- **area** is where the fix happens.
+- **auth** means Supabase Auth, the product. Problems signing in to Supabase's own services
+  (the dashboard, MCP OAuth) are `platform` or `studio`.
+- **type** follows the title when an issue mixes two kinds. Documented behaviour the
+  reporter does not want is `question`; a broken promise is `bug`.
+- **needs_engineer** asks who holds the answer, not whether the issue is closed or a
+  duplicate.
+- **duplicates** share type, area and engineer with the issue they copy, and point at the
+  earliest copy. One label (52550 → 52636) points the other way; scoring reads duplicate
+  links in both directions, so it counts the same.
+- An issue GitHub closed as a duplicate without recording a target is left blank.
+- Two duplicates the suggester missed:
+  - **52565 → 52541:** GitHub search did not return 52541 as a candidate.
+  - **52550 → 52636:** the suggester only sees older issues as candidates, and 52636 is
+    newer.
+
+  Both are candidate misses, not wrong judgements on candidates the suggester saw.
 
 What the numbers say:
 
