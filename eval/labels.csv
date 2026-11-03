@@ -15,14 +15,14 @@ number,title,type,area,needs_engineer,duplicate_of,doc_url,confirmed,seed,notes,
 52546,"Docs: auth.email.secure_password_change described as ""require current password"", but it maps to reauthentication; no con",docs,cli,yes,,,yes,github labels: bug,,type,
 52541,Hosted PostgREST 14.5 returns 401/PGRST303 after successful Supabase Auth sign-in,bug,platform,yes,,,yes,github labels: bug,,none,
 52538,"iOS: the first API request after a 2-3 minute pause fails with -1005 (HTTP/3 idle timeout 180 s on the edge, no NAT rebi",bug,platform,yes,,,yes,github labels: bug,,none,
-52537,Unexpected PostgreSQL Database Creation in Supabase Project (ALPHA SOLUTION),other,platform,no,52477,,,github labels: bug,,,suggested
+52537,Unexpected PostgreSQL Database Creation in Supabase Project (ALPHA SOLUTION),other,platform,no,52477,,yes,github labels: bug,,none,hand
 52520,UI/UX: Keep bottom action buttons visible when selecting storage policy operations,bug,studio,yes,,,,github labels: bug,,,suggested
-52484,passqword recovery failure,other,auth,no,,,,github labels: bug,,,suggested
+52484,passqword recovery failure,question,auth,no,,,yes,github labels: bug,,type,hand
 52479,"Dashboard: creating a partitioned queue fails with ""function pgmq.create_partitioned(unknown, integer, integer) does not",bug,studio,yes,,,,github labels: bug,,,suggested
-52477,equest to investigate an unexpected PostgreSQL database creation,other,platform,no,,,,github labels: bug,,,suggested
+52477,equest to investigate an unexpected PostgreSQL database creation,other,platform,no,,,yes,github labels: bug,,none,hand
 52430,Bump self-hosted images to patch Node.js Brotli vulnerability (CVE-2026-111497),bug,self-hosting,yes,,,yes,"github labels: bug, self-hosted",,none,spot-checked
 52384,"SMTP configuration example sends port as number, API expects string",docs,docs,no,,,,github labels: documentation,,,suggested
-52371,Database is still restarting after 1 day,other,platform,no,,,,github labels: bug,,,suggested
+52371,Database is still restarting after 1 day,other,platform,no,,,yes,github labels: bug,,none,hand
 52346,Self-hosted: gateway CORS on /functions/v1 allows every origin and overrides the function's own CORS (differs from hoste,bug,self-hosting,yes,,,yes,github labels: self-hosted,,none,spot-checked
 52304,"docs: clarify Management API migration transaction, history atomicity and request-size contract",docs,docs,yes,,,yes,github labels: documentation,,none,spot-checked
 52296,studio: PlanUpdateSidePanel fires useOrgSubscriptionQuery on mount when BILLING_READ is denied and omits disableProjectC,bug,studio,yes,,,,github labels: studio,,,suggested
@@ -30,19 +30,19 @@ number,title,type,area,needs_engineer,duplicate_of,doc_url,confirmed,seed,notes,
 52272,[Studio] Pressing Backspace or typing in Command Menu context search pages (Edge Functions / RLS Policies / Storage / Ta,bug,studio,yes,,,,"github labels: bug, studio",,,suggested
 52267,Sigin using password options fail,bug,auth,yes,,,,github labels: bug,,,suggested
 52263,pg_net extension-owned table permissions blocking hosted deployment,question,database,no,,,yes,github labels: bug,,none,spot-checked
-52234,Can't sign into dashboard using github,other,studio,no,,,yes,github labels: bug,,none,spot-checked
-52225,backup storage objetcs,other,platform,no,,,,github labels: bug,,,suggested
+52234,Can't sign into dashboard using github,other,platform,no,,,yes,github labels: bug,,area,spot-checked
+52225,backup storage objetcs,other,platform,no,,,yes,github labels: bug,,none,hand
 52222,Urgent: Supabase Project Restricted – Storage Quota Exceeded,other,platform,no,52219,,yes,github labels: bug,,none,spot-checked
 52219,""" bucket to delete old gallery images.",other,platform,no,,,yes,github labels: bug,,none,spot-checked
-52202,Urgent: Supabase Dashboard stuck loading – profile 404/409 errors,other,platform,no,,,,github labels: bug,,,suggested
-52200,Dev Problem,other,platform,no,,,,github labels: bug,,,suggested
+52202,Urgent: Supabase Dashboard stuck loading – profile 404/409 errors,other,platform,no,,,yes,github labels: bug,,none,hand
+52200,Dev Problem,other,platform,no,,,yes,github labels: bug,,none,hand
 52155,description,other,docs,no,,,yes,github labels: documentation,,none,spot-checked
 52133,"Studio build fails immediately on Windows: ""$SKIP_ASSET_UPLOAD"" was unexpected at this time.",bug,studio,yes,,,,github labels: studio,,,suggested
 52048,"GitHub integration: overlapping production deploy runs race, so an older commit's Edge Functions can overwrite a newer c",bug,platform,yes,,,,github labels: edge functions,,,suggested
 52022,Secret API keys return 401 Invalid API key,bug,platform,no,,,,github labels: bug,,,suggested
 52011,API gateway (sb_gateway_version 2) holds browser requests ~5 s while upstream answers in 3–5 ms,bug,platform,yes,,,,github labels: bug,,,suggested
-51989,invalid credentials issue,other,platform,no,,,,github labels: bug,,,suggested
-51988,invalid credentials issue,other,platform,no,,,,github labels: bug,,,suggested
+51989,invalid credentials issue,other,platform,no,,,yes,github labels: bug,,none,hand
+51988,invalid credentials issue,other,platform,no,,,yes,github labels: bug,,none,hand
 51916,pg-meta: function configuration values containing equals signs are truncated,bug,database,yes,,,,github labels: postgres,,,suggested
 51893,Edge Functions: HTTP/2 connection closed with no response on function-generated 4xx (HTTP/1.1 works),bug,edge-functions,yes,,,yes,"github labels: bug, edge functions",,none,spot-checked
 50950,fix: unable to find an information about Log Ingestion in the documentation,docs,docs,no,50943,,,github labels: documentation; closed as duplicate,,,suggested
@@ -60,6 +60,6 @@ number,title,type,area,needs_engineer,duplicate_of,doc_url,confirmed,seed,notes,
 DNS resolution issue aa raha hai.
 Please check DNS routing issue from Jio side",bug,platform,no,43142,,yes,github labels: bug; closed as duplicate,,none,spot-checked
 43230,"DNS ISSUE,",bug,platform,no,43142,,,github labels: bug; closed as duplicate,,,suggested
-43227,Supabase causing Auth and other issues.,other,platform,no,43142,,,github labels: bug; closed as duplicate,,,suggested
+43227,Supabase causing Auth and other issues.,bug,platform,no,43142,,yes,github labels: bug; closed as duplicate,,type,hand
 43202,jio is not supporting it due to which my supabase project is not connecting to supabase server/network and data is not l,bug,platform,no,43142,,yes,github labels: bug; closed as duplicate,,none,spot-checked
-43200,Not able to sign in,other,auth,no,,,,github labels: bug; closed as duplicate,,,suggested
+43200,Not able to sign in,other,auth,no,,,yes,github labels: bug; closed as duplicate,,none,hand
