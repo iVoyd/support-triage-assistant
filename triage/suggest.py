@@ -331,3 +331,98 @@ def change_stats(labels_path: Path, suggestions_path: Path) -> dict:
         "per_field": per_field,
         "models": models,
     }
+
+
+# ---------- no-manual-labelling path: accept, then spot-check a random sample ----------
+
+
+def accept_suggestions(labels_path: Path, suggestions_path: Path) -> dict:
+    """Copy each suggestion into its unconfirmed row as the label, marked source=suggested.
+
+    Rows a person already confirmed are left alone. Rows without a suggestion stay
+    unconfirmed (and are not scored) until labelled by hand.
+    """
+    rows = read_labels(labels_path)
+    suggestions = read_suggestions(suggestions_path)
+    accepted = skipped = 0
+    for row in rows:
+        if row["confirmed"] == "yes":
+            continue
+        s = suggestions.get(row["number"])
+        if s is None:
+            skipped += 1
+            continue
+        row.update(as_label_values(s))
+        row["source"] = "suggested"
+        accepted += 1
+    write_labels(labels_path, rows)
+    return {"accepted": accepted, "no_suggestion": skipped}
+
+
+def spot_check_sample(labels_path: Path, k: int, seed: int) -> list[str]:
+    """A reproducible random sample of k suggestion-derived rows.
+
+    Drawn from every row that came from the suggester (still 'suggested' or already
+    'spot-checked'), sorted by number, so the same seed always gives the same sample.
+    """
+    import random
+
+    pool = sorted(
+        (
+            r["number"]
+            for r in read_labels(labels_path)
+            if r["source"] in ("suggested", "spot-checked")
+        ),
+        key=int,
+    )
+    return random.Random(seed).sample(pool, min(k, len(pool)))
+
+
+def save_spot_check(path: Path, seed: int, sample: list[str]) -> None:
+    path.write_text(json.dumps({"seed": seed, "sample": sample}, indent=2) + "\n")
+
+
+def wilson_interval(errors: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% interval for a proportion; stays sensible for small n and 0 or n errors."""
+    if n == 0:
+        return (0.0, 1.0)
+    p = errors / n
+    denom = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / denom
+    return (max(0.0, centre - half), min(1.0, centre + half))
+
+
+def label_provenance(labels_path: Path, suggestions_path: Path) -> dict:
+    """Everything the scorecard header needs to say where the labels came from."""
+    rows = read_labels(labels_path)
+    suggestions = read_suggestions(suggestions_path)
+    base = change_stats(labels_path, suggestions_path)
+    derived = [r for r in rows if r["source"] in ("suggested", "spot-checked")]
+    checked = [r for r in derived if r["source"] == "spot-checked"]
+    corrected = [r for r in checked if r["changed"] not in ("", "none")]
+    per_field = {f: 0 for f in FIELDS}
+    for r in corrected:
+        for f in r["changed"].split(","):
+            if f in per_field:
+                per_field[f] += 1
+    spot_file = labels_path.with_name("spot_check.json")
+    spot = json.loads(spot_file.read_text()) if spot_file.exists() else {}
+    models = sorted(
+        {suggestions[r["number"]]["model"] for r in derived if r["number"] in suggestions}
+    )
+    return {
+        **base,
+        "models": models or base["models"],
+        "accepted": len(derived),
+        "hand": sum(1 for r in rows if r["confirmed"] == "yes" and r["source"] in ("hand", "")),
+        "spot_check": {
+            "seed": spot.get("seed"),
+            "sampled": len(spot.get("sample", [])),
+            "checked": len(checked),
+            "corrected": len(corrected),
+            "per_field": per_field,
+            "rate": len(corrected) / len(checked) if checked else None,
+            "interval": wilson_interval(len(corrected), len(checked)),
+        },
+    }

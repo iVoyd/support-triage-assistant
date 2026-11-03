@@ -131,6 +131,8 @@ older prompt; `--model` overrides the model; `--repo owner/name` overrides the t
 
 ### Evaluate
 
+Seed the label set and get a larger model's suggestions for every row:
+
 ```bash
 triage label --seed --n 60
 ```
@@ -139,22 +141,44 @@ triage label --seed --n 60
 triage label --suggest
 ```
 
+`--suggest` costs about 1–2 cents per row with Sonnet 5.5 (around $1 for 60 rows; the run
+prints the total). Then pick one of two paths.
+
+**Quick path: accept the suggestions, hand-check a random sample.**
+
+```bash
+triage label --accept-suggestions
+```
+
+```bash
+triage label --spot-check 15
+```
+
+The first command copies every suggestion into `eval/labels.csv` as the label
+(`source=suggested`). The second shows a random 15 of those rows to confirm or fix
+(`source=spot-checked`). The sample is drawn with a fixed seed (`--sample-seed`, default 1)
+and saved in `eval/spot_check.json`, so the same 15 come up again if you stop half-way. The
+share you correct estimates the error rate of the unchecked labels. The scorecard reports
+it with a 95% interval, which is wide for 15 rows.
+
+**Full path: confirm every row by hand.**
+
 ```bash
 triage label
 ```
 
-`--suggest` costs about 1–2 cents per row with Sonnet 5.5 (around $1 for 60 rows; the run
-prints the total). In `triage label`, each row shows the suggestion with a reason per field.
-Enter accepts the values shown, or type fixes such as `t=b a=auth e=n` (type, area, needs
-engineer), `d=52546` or `d=-` (duplicate of), `u=<docs URL>` or `u=none` (the docs page
-that answers it, optional), then Enter. `s` skips, `q` quits; every answer is saved
-immediately, so you can stop and continue later.
+Each row shows the suggestion with a reason per field. Enter accepts the values shown, or
+type fixes such as `t=b a=auth e=n` (type, area, needs engineer), `d=52546` or `d=-`
+(duplicate of), `u=<docs URL>` or `u=none` (the docs page that answers it, optional), then
+Enter. `s` skips, `q` quits; every answer is saved immediately.
+
+Either way:
 
 ```bash
 triage label --stats
 ```
 
-shows how many suggestions you changed. Then:
+prints the line the scorecard will use to say where the labels came from. Then:
 
 ```bash
 triage eval
@@ -190,9 +214,11 @@ every scorecard metric, and end-to-end runs that store records.
 The evaluation scorecard will be in [eval/SCORECARD.md](eval/SCORECARD.md) after the first
 labelled run.
 
-How the labels were made: labels suggested by a larger model, then reviewed and corrected by
-hand; N of 60 changed. (N is filled in from `triage label --stats` after the labelling run;
-the scorecard header carries the same line, generated from the data.)
+How the labels were made: filled in after the labelling run from `triage label --stats`. The
+scorecard header carries the same line, generated from the data. On the quick path it reads
+"Labels: suggested by claude-sonnet-5-5; a random 15 of 60 hand-checked, N corrected
+(estimated label error rate X%)."; on the full path, "labels suggested by a larger model,
+then reviewed and corrected by hand; N of 60 changed".
 
 The suggester is kept separate from the system it helps evaluate:
 - **Different model:** it is `claude-sonnet-5-5`, not the evaluated `claude-haiku-5-5`, and
@@ -205,6 +231,9 @@ The suggester is kept separate from the system it helps evaluate:
   final answers in `eval/labels.csv`.
 - **Some bias remains:** a reviewer accepting suggestions can still lean towards them, so
   per-field change counts are reported to show how much was corrected.
+- **Quick path caveat:** on the quick path most labels are the suggester's own answers, so
+  scores measure agreement with Sonnet 5.5 as much as with a person. The spot-check error
+  rate says how far to trust them.
 
 ### First run (Milestone 1, prompt v1)
 

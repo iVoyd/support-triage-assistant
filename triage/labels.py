@@ -30,6 +30,9 @@ COLUMNS = [
     "seed",  # where the pre-filled values came from
     "notes",
     "changed",  # on confirm: suggested fields Theo changed ("none" if he kept them all)
+    # hand: confirmed in the full manual flow; suggested: copied from the suggester and not
+    # checked; spot-checked: a suggested row Theo checked in `triage label --spot-check`
+    "source",
 ]
 DUP_REF = re.compile(r"(?:duplicate of|dupe of|duplicates|same as|see)\s*#(\d+)", re.IGNORECASE)
 HASH_REF = re.compile(r"(?<![\w/])#(\d+)\b")
@@ -300,15 +303,24 @@ def label_loop(
     conn: sqlite3.Connection,
     cfg: Config,
     path: Path,
-    ask: Callable[[str], str] = input,
+    ask: Callable[[str], str] | None = None,
     out: Callable[[str], None] = print,
     suggestions_path: Path | None = None,
+    only: list[str] | None = None,
+    source: str = "hand",
 ) -> dict:
+    """Walk unconfirmed rows (or just the `only` numbers, in that order) for confirmation."""
     from .suggest import changed_fields, read_suggestions
+
+    ask = ask or input  # looked up at call time
 
     suggestions = read_suggestions(suggestions_path) if suggestions_path else {}
     rows = read_labels(path)
-    todo = [r for r in rows if r["confirmed"] != "yes"]
+    if only is not None:
+        by_number = {r["number"]: r for r in rows}
+        todo = [by_number[n] for n in only if n in by_number and by_number[n]["confirmed"] != "yes"]
+    else:
+        todo = [r for r in rows if r["confirmed"] != "yes"]
     areas = ", ".join(cfg.areas)
     out(f"{len(rows) - len(todo)} of {len(rows)} rows confirmed.")
     out(HELP)
@@ -350,6 +362,7 @@ def label_loop(
                 )
                 continue
             row["confirmed"] = "yes"
+            row["source"] = source
             if row["number"] in suggestions:
                 row["changed"] = ",".join(changed_fields(row, suggestions[row["number"]])) or "none"
             write_labels(path, rows)

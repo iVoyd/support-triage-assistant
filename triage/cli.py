@@ -110,15 +110,49 @@ def cmd_label(args, cfg, conn):
     path = Path(args.file)
     suggestions_path = path.with_name("suggestions.csv")
     if args.stats:
-        from .suggest import change_stats
+        from .evaluate import labels_note
+        from .suggest import label_provenance
 
-        st = change_stats(path, suggestions_path)
+        st = label_provenance(path, suggestions_path)
         fields = ", ".join(f"{f} {n}" for f, n in st["per_field"].items())
         print(
             f"{st['confirmed']} rows confirmed; {st['suggested']} of them had a suggestion "
             f"({', '.join(st['models']) or 'none'}); {st['changed']} of {st['suggested']} "
             f"changed by hand (per field: {fields})"
         )
+        print(labels_note(st))
+        return 0
+    if args.accept_suggestions:
+        from .suggest import accept_suggestions
+
+        res = accept_suggestions(path, suggestions_path)
+        print(
+            f"accepted {res['accepted']} suggestions as labels (source=suggested); "
+            f"{res['no_suggestion']} unconfirmed rows had no suggestion and are not scored "
+            "until labelled by hand. Next: `triage label --spot-check 15`."
+        )
+        return 0
+    if args.spot_check:
+        from .suggest import save_spot_check, spot_check_sample
+
+        sample = spot_check_sample(path, args.spot_check, args.sample_seed)
+        if not sample:
+            print("nothing to spot-check: run `triage label --accept-suggestions` first.")
+            return 1
+        save_spot_check(path.with_name("spot_check.json"), args.sample_seed, sample)
+        print(
+            f"spot-checking a random {len(sample)} (seed {args.sample_seed}): "
+            + " ".join(f"#{n}" for n in sample)
+        )
+        result = label_loop(
+            conn,
+            cfg,
+            path,
+            suggestions_path=suggestions_path,
+            only=sample,
+            source="spot-checked",
+        )
+        print(f"checked {result['confirmed']} now; {result['remaining']} of the sample left")
         return 0
     if args.suggest:
         from .github import GitHubClient
@@ -274,6 +308,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="pre-fill unconfirmed rows with a larger model's suggestions (you still confirm)",
     )
     lb.add_argument("--suggest-model", help="override [labels] suggest_model")
+    lb.add_argument(
+        "--accept-suggestions",
+        action="store_true",
+        help="use every suggestion as the label (source=suggested), no manual pass",
+    )
+    lb.add_argument(
+        "--spot-check",
+        type=int,
+        metavar="K",
+        help="hand-check a random K of the accepted suggestions (source=spot-checked)",
+    )
+    lb.add_argument(
+        "--sample-seed", type=int, default=1, help="random seed for --spot-check (default 1)"
+    )
     lb.add_argument(
         "--stats", action="store_true", help="how many suggestions were changed by hand"
     )

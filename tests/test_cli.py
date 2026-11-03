@@ -34,7 +34,7 @@ def test_label_seed_then_eval_no_run(tmp_path, capsys, monkeypatch):
     try:
         cli.main(["--db", db, "eval", "--no-run", "--labels", str(labels), "--out", str(out)])
     except SystemExit as e:
-        assert "no confirmed rows" in str(e)
+        assert "no confirmed or accepted rows" in str(e)
     for r in rows:
         r.update(type=r["type"] or "bug", area=r["area"] or "auth", needs_engineer="yes")
     write_labels(labels, rows)
@@ -85,3 +85,26 @@ def test_label_stats_and_suggest_need_key(tmp_path, capsys, monkeypatch):
     assert "1 rows confirmed; 0 of them had a suggestion" in capsys.readouterr().out
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     assert cli.main(["--db", db, "label", "--suggest", "--file", str(labels)]) == 1
+
+
+def test_accept_then_spot_check_via_cli(tmp_path, capsys, monkeypatch):
+    import json
+
+    from tests.test_suggest import make_suggested
+
+    labels, _ = make_suggested(tmp_path, n=20)
+    db = str(tmp_path / "t.db")
+    args = ["--db", db, "label", "--file", str(labels)]
+    assert cli.main([*args, "--accept-suggestions"]) == 0
+    assert "accepted 18 suggestions" in capsys.readouterr().out
+    monkeypatch.setattr("builtins.input", lambda _: "")  # accept every sampled row
+    assert cli.main([*args, "--spot-check", "5", "--sample-seed", "7"]) == 0
+    out = capsys.readouterr().out
+    assert "spot-checking a random 5 (seed 7)" in out and "checked 5 now" in out
+    saved = json.loads((tmp_path / "spot_check.json").read_text())
+    assert saved["seed"] == 7 and len(saved["sample"]) == 5
+    assert cli.main([*args, "--stats"]) == 0
+    assert (
+        "Labels: suggested by claude-sonnet-5-5; a random 5 of 18 hand-checked, 0 corrected "
+        "(estimated label error rate 0%)." in capsys.readouterr().out
+    )

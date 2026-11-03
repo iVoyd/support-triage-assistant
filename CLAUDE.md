@@ -11,6 +11,9 @@
   `GITHUB_TOKEN`). Never commit `.env`, keys, or tokens. Add `.env` to `.gitignore`.
 - Read-only toward the outside world: never post, comment, label, or write to any
   third-party service.
+- In PR, issue and commit text, refer to third-party issues by plain number ("Supabase
+  issue 52547"), never as `owner/repo#N` or a link: GitHub turns those into backlinks on the
+  other project's issue.
 - Costs: default to the cheapest capable model (`claude-haiku-5-5`), use prompt caching
   for long fixed prompts, and record tokens and cost per run.
 - README is part of "done": what it does, a diagram, how to run it, results/scorecard,

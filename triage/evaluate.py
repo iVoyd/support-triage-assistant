@@ -175,11 +175,15 @@ def evaluate(
     log=print,
 ) -> dict:
     labels = read_labels(labels_path)
-    rows = [r for r in labels if unconfirmed or r["confirmed"] == "yes"]
+    # usable: checked by a person, or accepted from the suggester (`--accept-suggestions`)
+    rows = [
+        r for r in labels if unconfirmed or r["confirmed"] == "yes" or r["source"] == "suggested"
+    ]
     if not rows:
         raise SystemExit(
-            f"no {'' if unconfirmed else 'confirmed '}rows in {labels_path}; run `triage label`"
-            + ("" if unconfirmed else " or pass --unconfirmed")
+            f"no {'' if unconfirmed else 'confirmed or accepted '}rows in {labels_path}; run "
+            "`triage label` or `triage label --accept-suggestions`"
+            + ("" if unconfirmed else ", or pass --unconfirmed")
         )
     stored = {r[0] for r in conn.execute("SELECT number FROM issues WHERE repo = ?", (cfg.repo,))}
     missing_issues = [int(r["number"]) for r in rows if int(r["number"]) not in stored]
@@ -235,10 +239,10 @@ def evaluate(
             WHERE repo = ? AND model = ? AND number IN ({marks})""",
         (cfg.repo, cfg.model, *numbers),
     ).fetchone()
-    from .suggest import change_stats
+    from .suggest import label_provenance
 
     return {
-        "labels": change_stats(labels_path, labels_path.with_name("suggestions.csv")),
+        "labels": label_provenance(labels_path, labels_path.with_name("suggestions.csv")),
         "date": datetime.now(UTC).strftime("%Y-%m-%d"),
         "repo": cfg.repo,
         "model": cfg.model,
@@ -271,6 +275,24 @@ def pct(x) -> str:
 
 def labels_note(st: dict | None) -> str:
     """Where the labels came from, e.g. for the README and the scorecard header."""
+    if st and st.get("accepted"):
+        sc = st["spot_check"]
+        model = ", ".join(st["models"])
+        if not sc["checked"]:
+            return (
+                f"Labels: suggested by {model}; none hand-checked yet, so the label error "
+                "rate is unknown."
+            )
+        lo, hi = sc["interval"]
+        text = (
+            f"Labels: suggested by {model}; a random {sc['checked']} of {st['accepted']} "
+            f"hand-checked, {sc['corrected']} corrected (estimated label error rate "
+            f"{sc['rate']:.0%})."
+        )
+        text += f" 95% interval for that rate: {lo:.0%}–{hi:.0%}."
+        if st["hand"]:
+            text += f" Another {st['hand']} labelled fully by hand."
+        return text
     if not st or not st["suggested"]:
         return "Labels: entered by hand (some seeded from GitHub labels), all reviewed by Theo."
     fields = ", ".join(f"{f} {n}" for f, n in st["per_field"].items() if n)
