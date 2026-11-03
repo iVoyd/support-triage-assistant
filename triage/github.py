@@ -40,6 +40,7 @@ class GitHubClient:
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "support-triage-assistant",
         }
+        self.token = token
         if token:
             headers["Authorization"] = f"Bearer {token}"
         self.http = httpx.Client(base_url=API, headers=headers, timeout=30, transport=transport)
@@ -60,8 +61,20 @@ class GitHubClient:
         return None
 
     def get(self, path: str, params: dict | None = None):
+        return self._send("GET", path, params=params)
+
+    def graphql(self, query: str) -> dict:
+        """Run a read-only GraphQL query (GitHub's GraphQL API uses POST even for reads).
+
+        Mutations are refused here so this client can never write to GitHub.
+        """
+        if not query.lstrip().startswith("query") or "mutation" in query:
+            raise ValueError("only GraphQL queries are allowed")
+        return self._send("POST", "/graphql", json={"query": query})
+
+    def _send(self, method: str, path: str, **kw):
         for _ in range(3):
-            r = self.http.get(path, params=params)
+            r = self.http.request(method, path, **kw)
             self.requests += 1
             wait = self._wait_seconds(r)
             if wait is not None:
@@ -193,3 +206,32 @@ def get_issue(gh: GitHubClient, repo: str, number: int) -> dict:
 
 def get_comments(gh: GitHubClient, repo: str, number: int) -> list[dict]:
     return gh.get(f"/repos/{repo}/issues/{number}/comments", params={"per_page": 100})
+
+
+def duplicate_targets(gh: GitHubClient, repo: str, numbers: list[int]) -> dict[int, int]:
+    """For issues closed as duplicates, the issue each one was closed as a duplicate of.
+
+    The REST API does not expose this; GraphQL has it on the close event as duplicateOf.
+    One query for all issues (needs a token). Returns {} if the query fails.
+    """
+    if not numbers:
+        return {}
+    owner, name = repo.split("/")
+    fields = " ".join(
+        f"i{int(n)}: issue(number: {int(n)}) {{ timelineItems(itemTypes: [CLOSED_EVENT], "
+        "last: 1) { nodes { ... on ClosedEvent { duplicateOf { ... on Issue { number } } } } } }"
+        for n in numbers
+    )
+    query = f'query {{ repository(owner: "{owner}", name: "{name}") {{ {fields} }} }}'
+    try:
+        data = gh.graphql(query)
+    except httpx.HTTPStatusError:
+        return {}
+    repo_data = (data.get("data") or {}).get("repository") or {}
+    out = {}
+    for n in numbers:
+        nodes = ((repo_data.get(f"i{int(n)}") or {}).get("timelineItems") or {}).get("nodes") or []
+        target = (nodes[-1].get("duplicateOf") or {}).get("number") if nodes else None
+        if target:
+            out[int(n)] = int(target)
+    return out

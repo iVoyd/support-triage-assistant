@@ -98,15 +98,33 @@ def fetch_duplicate_examples(
     gh, conn: sqlite3.Connection, cfg: Config, limit: int, log: Callable[[str], None] = print
 ) -> dict[int, str]:
     """Store recent closed-as-duplicate issues and their targets; return {number: target}."""
-    from .github import get_comments, get_issue, search_closed_duplicates, upsert_issue
+    from .github import (
+        duplicate_targets,
+        get_comments,
+        get_issue,
+        search_closed_duplicates,
+        upsert_issue,
+    )
 
     found = {}
-    for item in search_closed_duplicates(gh, cfg.repo, limit):
-        upsert_issue(conn, cfg.repo, item)
-        comments = get_comments(gh, cfg.repo, item["number"]) if item.get("comments") else []
-        target = duplicate_target(
-            [c.get("body") or "" for c in comments] + [item.get("body") or ""], item["number"]
+    items = search_closed_duplicates(gh, cfg.repo, limit)
+    # GitHub records the target on the close event (GraphQL only, needs a token)
+    recorded = duplicate_targets(gh, cfg.repo, [i["number"] for i in items]) if gh.token else {}
+    if items and not recorded:
+        log(
+            "note: could not read duplicate targets from GitHub (no token or query failed); "
+            "falling back to 'duplicate of #N' comments"
         )
+    for item in items:
+        upsert_issue(conn, cfg.repo, item)
+        if item["number"] in recorded:
+            target = str(recorded[item["number"]])
+        else:
+            comments = get_comments(gh, cfg.repo, item["number"]) if item.get("comments") else []
+            target = duplicate_target(
+                [c.get("body") or "" for c in comments] + [item.get("body") or ""],
+                item["number"],
+            )
         if target != "?":
             have = conn.execute(
                 "SELECT 1 FROM issues WHERE repo = ? AND number = ?", (cfg.repo, int(target))
@@ -141,8 +159,16 @@ def select_issues(conn: sqlite3.Connection, cfg: Config, n: int, must: list[int]
 def seed_labels(
     conn: sqlite3.Connection, cfg: Config, path: Path, n: int, duplicates: dict[int, str]
 ) -> tuple[int, int]:
-    """Add seeded rows to labels.csv. Existing rows (confirmed or not) are kept as they are."""
+    """Add seeded rows to labels.csv.
+
+    Existing rows are kept. The only change to them: an unconfirmed row whose duplicate
+    target was unknown ("?" or blank) gets the target if one was found now.
+    """
     existing = read_labels(path)
+    for row in existing:
+        target = duplicates.get(int(row["number"]), "")
+        if row["confirmed"] != "yes" and row["duplicate_of"] in ("?", "") and target.isdigit():
+            row["duplicate_of"] = target
     have = {int(r["number"]) for r in existing}
     triaged = [
         r[0]

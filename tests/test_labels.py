@@ -19,8 +19,12 @@ AREAS = ["auth", "database", "docs", "other"]
 
 
 def recorded(request: httpx.Request) -> httpx.Response:
-    assert request.method == "GET"
     path = request.url.path
+    if path == "/graphql":
+        query = json.loads(request.content)["query"]
+        assert query.startswith("query") and "i52547: issue(number: 52547)" in query
+        return httpx.Response(200, json=load_fixture("github_graphql_duplicates.json"))
+    assert request.method == "GET"
     if path == "/search/issues":
         assert "reason:duplicate" in request.url.params["q"]
         return httpx.Response(200, json=load_fixture("github_search_duplicates.json"))
@@ -32,8 +36,8 @@ def recorded(request: httpx.Request) -> httpx.Response:
     raise AssertionError(f"unexpected {request.url}")
 
 
-def gh():
-    return GitHubClient(transport=httpx.MockTransport(recorded))
+def gh(token="t"):
+    return GitHubClient(token=token, transport=httpx.MockTransport(recorded))
 
 
 def test_duplicate_target():
@@ -150,3 +154,35 @@ def test_ctrl_c_quits_cleanly(conn, cfg, tmp_path):
         "confirmed": 0,
         "remaining": 2,
     }
+
+
+def test_without_token_targets_fall_back_to_comments(conn, cfg):
+    logs = []
+    found = fetch_duplicate_examples(gh(token=None), conn, cfg, 10, log=logs.append)
+    assert found == {52547: "?"}  # the real issue has no "duplicate of #N" comment
+    assert any("falling back" in m for m in logs)
+
+
+def test_graphql_refuses_mutations():
+    import pytest
+
+    with pytest.raises(ValueError):
+        gh().graphql("mutation { addComment(input: {}) { clientMutationId } }")
+
+
+def test_reseed_fills_unknown_targets_in_unconfirmed_rows(conn, cfg, tmp_path):
+    from triage.labels import write_labels
+
+    path = tmp_path / "labels.csv"
+    fetch_duplicate_examples(gh(token=None), conn, cfg, 10, log=lambda m: None)
+    seed_labels(conn, cfg, path, 2, {52547: "?"})
+    assert {r["number"]: r["duplicate_of"] for r in read_labels(path)}["52547"] == "?"
+    found = fetch_duplicate_examples(gh(), conn, cfg, 10, log=lambda m: None)
+    assert seed_labels(conn, cfg, path, 2, found) == (1, 1)  # target 52546 now stored too
+    rows = {r["number"]: r for r in read_labels(path)}
+    assert rows["52547"]["duplicate_of"] == "52546"
+    # a confirmed row is never changed
+    rows["52547"].update(confirmed="yes", duplicate_of="")
+    write_labels(path, list(rows.values()))
+    seed_labels(conn, cfg, path, 2, found)
+    assert {r["number"]: r["duplicate_of"] for r in read_labels(path)}["52547"] == ""
