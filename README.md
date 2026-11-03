@@ -351,12 +351,23 @@ Prompt v4 targeted all five. In the re-review:
 - **Reduced:** talk about its own inputs fell from 5 drafts to 2.
 - **Still open:** asking for information already given (5 drafts). That is the v5 target.
 
-**The cost of v4's stricter checks:** 52582 and 52520 lost their draft. Their v3 drafts
-contained exactly what v4 rejects ("The provided documentation doesn't cover this page",
-"I've labelled this as a feature request"). The v4 draft was apparently sent back and
-failed again on the one retry, and invalid drafts are not offered for review. Overall,
-valid outputs fell from 61 to 57 of 62. The drafts that still needed edits needed bigger
-ones (0.55 vs 0.47).
+**The cost of v4: longer summaries.** Valid outputs fell from 61 to 57 of 62. All five
+invalid v4 records failed the existing summary rule (at most 3 sentences), even after the
+one retry:
+
+| Issue | Summary sentences | Other error |
+| --- | --- | --- |
+| 52582 | 5 | – |
+| 52520 | 5 | – |
+| 52267 | 4 | – |
+| 52133 | 4 | – |
+| 52222 | 6 | did not name the likely duplicate (52219) |
+
+The new v4 checks were not the cause, except as a second error on 52222. 52582 and 52520
+are in the re-review set, so they lost their draft there; invalid drafts are not offered
+for review. The same rule caused invalid records before (52267 and 52133 under v2), but v4
+tripped it more often, probably because its longer instructions crowd out the summary
+limit. The drafts that still needed edits also needed bigger ones (0.55 vs 0.47).
 
 Labelling rules Theo followed:
 
@@ -520,9 +531,9 @@ The fixed instructions are cached: from the second issue on, each call reads abo
 - Review decisions were proposed by Claude and confirmed by Theo, not written from scratch
   by a person. A Claude reviewer may favour drafts that read like Claude's own, and the v4
   re-review was proposed by a reviewer who knew what v4 was meant to fix.
-- With the v4 checks, a draft that fails twice is stored as invalid and never reaches
-  review (2 of 20 re-review issues). Prompt v5 should show such drafts with their errors
-  instead of dropping them.
+- A record that fails a check twice is stored as invalid and never reaches review. With v4
+  that hit 5 of 62 issues, all on the 3-sentence summary limit, including 2 of the 20
+  re-review issues. Prompt v5 targets this (see `eval/CHANGELOG.md`).
 
 ## How this was built
 

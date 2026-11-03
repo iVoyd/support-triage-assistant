@@ -44,7 +44,7 @@ draft, so they count as failures:
 | Approved as is | 2 (10%) | 5 (25%) |
 | Approved after edits | 17 | 13 |
 | Rejected | 1 | 0 |
-| No valid draft (failed the checks twice) | 0 | 2 (52582, 52520) |
+| No valid draft (summary over 3 sentences, also after the retry) | 0 | 2 (52582, 52520) |
 | Usable | 19 (95%) | 18 (90%) |
 | Mean edit distance, edited drafts | 0.47 | 0.55 |
 | Mean edit distance, all usable drafts | 0.42 | 0.39 |
@@ -55,23 +55,35 @@ What v4 fixed, by Theo's count:
 - Talk about its own inputs is down from 5 drafts to 2.
 
 What got worse:
-- Two of the 20 issues lost their draft. Their v3 drafts contain exactly what v4 rejects:
-  52582 said "The provided documentation doesn't cover this page" and 52520 said "I've
-  labelled this as a feature request". The likely story is that v4 wrote the same thing,
-  the check sent it back, the one retry repeated it, and the record was stored as invalid
-  (not yet confirmed from the stored errors). Review only offers valid drafts, so these
-  dropped out. Valid outputs fell from 61 to 57 of 62 overall.
+- Longer summaries. Valid outputs fell from 61 to 57 of 62. All five invalid v4 records
+  failed the existing 3-sentence summary rule, also after the retry: 52582 (5 sentences),
+  52520 (5), 52267 (4), 52133 (4) and 52222 (6). 52222 also failed the new duplicate check:
+  it did not name 52219. So 4 of the 5 failures were the summary limit alone, and none came
+  from the self-talk or claimed-action checks. (An earlier version of this entry guessed
+  the opposite for 52582 and 52520; the stored errors showed it was wrong.) 52582 and 52520
+  are in the re-review set and lost their draft there, because review only offers valid
+  drafts. The same rule caused invalid records before (52267 and 52133 under v2), but v4
+  tripped it more often.
 - The drafts that still needed edits needed bigger ones (0.55 vs 0.47).
 
 Still open:
 - Asking for information already in the issue, 5 drafts. This is the v5 target.
 
 Kept as default: classification held (type +2 points, the rest unchanged) and three times
-as many drafts went out unchanged. The cost is a draft lost on 2 of 20 issues.
-Possible fixes for v5:
-- Offer drafts that fail a check to review, with the errors shown, instead of dropping
-  them.
-- Or allow a second retry.
+as many drafts went out unchanged. The cost is longer summaries: 5 of 62 records invalid,
+including 2 of the 20 re-review issues.
+
+v5 targets:
+- Asking for information already in the issue (above).
+- The summary limit:
+  - Restate "summary: at most 3 sentences" near the end of the v4 block, where the new
+    rules pushed it away from the end of the prompt.
+  - Make the retry message quote the limit and the summary itself, and ask for it cut to 3
+    sentences.
+  - Check that the sentence counter is not miscounting these 5 summaries before blaming
+    the model.
+- Offer records that still fail a check to review, with the errors shown, instead of
+  dropping them.
 
 ## v3
 
