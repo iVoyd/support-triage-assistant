@@ -94,8 +94,33 @@ URLs listed here.
 confidence: 0.0 to 1.0""",
     )
 )
-PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2}
-DEFAULT_VERSION = "v2"
+# v3 (see eval/CHANGELOG.md): types follow Theo's rule for single-project issues. `other`
+# is only for account or billing matters that support alone can act on.
+OLD_TYPES = """\
+- bug: something that used to work, or is documented to work, and does not.
+- question: the reporter needs help using the product; nothing is broken.
+- feature: a request for new behaviour or an enhancement.
+- docs: the documentation is missing, wrong or unclear.
+"""
+NEW_TYPES = """\
+- bug: something that used to work, or is documented to work, and does not. This includes a
+  problem on one project when the evidence points to a product defect (for example, a
+  hosted service rejecting requests that the docs say are valid).
+- question: the reporter needs help with setup or usage. This includes a technical problem
+  on one project that is not shown to be a product defect (for example, getting a
+  connection or configuration setting to work).
+- feature: a request for new behaviour or an enhancement.
+- docs: the documentation is missing, wrong or unclear.
+- other: account or billing matters that only the support team can act on: a restricted or
+  paused project, quotas, plans, signing in to the Supabase dashboard or account. Also spam
+  and empty issue templates. A technical problem on one project is never `other`.
+"""
+SYSTEM_V3 = SYSTEM_V2.replace(
+    OLD_TYPES + "- other: spam, meta discussion, or anything that fits none of the above.\n",
+    NEW_TYPES,
+)
+PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2, "v3": SYSTEM_V3}
+DEFAULT_VERSION = "v3"
 
 
 def format_areas(areas: dict[str, str]) -> str:

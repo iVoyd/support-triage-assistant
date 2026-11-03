@@ -17,7 +17,7 @@ effort = "low"
 top_k = 5
 max_tokens = 4000
 # Prompt templates live in triage/prompt.py; see eval/CHANGELOG.md for what changed.
-prompt_version = "v2"
+prompt_version = "v3"
 # Drop retrieved doc chunks scoring below this BM25 score. A first guess: tune it with the
 # threshold table in eval/SCORECARD.md.
 min_score = 20.0

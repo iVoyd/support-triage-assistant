@@ -29,7 +29,7 @@ class Config:
     max_tokens: int
     areas: dict[str, str]
     prices: dict[str, Prices] = field(default_factory=dict)
-    prompt_version: str = "v2"
+    prompt_version: str = "v3"
     # retrieval: drop doc chunks whose BM25 score is below this (0 = keep all top_k)
     min_score: float = 0.0
     # duplicates: how many TF-IDF candidates, and the cosine needed before asking the model
@@ -68,7 +68,7 @@ def load_config(path: str | Path) -> Config:
         max_tokens=int(tri.get("max_tokens", 4000)),
         areas=dict(areas),
         prices=prices,
-        prompt_version=tri.get("prompt_version", "v2"),
+        prompt_version=tri.get("prompt_version", "v3"),
         min_score=float(tri.get("min_score", 0.0)),
         dup_candidates=int(dups.get("candidates", 5)),
         dup_min_similarity=float(dups.get("min_similarity", 0.2)),

@@ -4,6 +4,27 @@ Each prompt change, why it was made, and its effect on the scorecard. Both versi
 `triage/prompt.py`, so `triage eval --prompt v1` and `--prompt v2` can be compared on the
 same labels.
 
+## v3
+
+Why: in the v2 scorecard, 14 of 20 type misses were issues labelled `other` that the model
+called `bug` or `question`. The label guide and the prompt meant different things by
+`other`. Theo's rule, now in both the prompt and the label suggester's guide:
+
+- `other` covers account or billing matters that only support can act on: a restricted or
+  paused project, quotas, plans, dashboard or account sign-in. It also covers spam and
+  empty templates.
+- A technical problem on one project is never `other`. It is `question` if it is about
+  setup or usage, and `bug` if the evidence shows a product defect.
+
+Only the `type` definitions changed. The rest of v2 is unchanged (tested). The examples in
+the prompt are generic on purpose. Theo's examples were issues from the labelled set
+(52587, 52541, 52565), and naming them would grade v3 partly on issues it had been shown.
+
+Labels: some rows labelled `other` before this rule may now be `question` or `bug`. Theo
+re-checks them with `triage label --reopen` before the v3 eval.
+
+Score delta vs v2: pending the v3 eval run.
+
 ## v2 (Milestone 2)
 
 Why: reading the 20-issue v1 run (README, "First run").

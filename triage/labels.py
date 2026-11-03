@@ -362,10 +362,24 @@ def label_loop(
                 )
                 continue
             row["confirmed"] = "yes"
-            row["source"] = source
+            # a spot-checked row stays spot-checked when re-confirmed after --reopen,
+            # so the random sample keeps meaning what it says
+            row["source"] = "spot-checked" if row["source"] == "spot-checked" else source
             if row["number"] in suggestions:
                 row["changed"] = ",".join(changed_fields(row, suggestions[row["number"]])) or "none"
             write_labels(path, rows)
             done += 1
             break
     return {"confirmed": done, "remaining": len(todo) - done}
+
+
+def reopen(path: Path, numbers: list[str]) -> list[str]:
+    """Mark rows unconfirmed again so `triage label` shows them; values are kept as they are."""
+    rows = read_labels(path)
+    found = []
+    for row in rows:
+        if row["number"] in numbers and row["confirmed"] == "yes":
+            row["confirmed"] = ""
+            found.append(row["number"])
+    write_labels(path, rows)
+    return found

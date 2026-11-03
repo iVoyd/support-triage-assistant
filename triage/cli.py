@@ -132,6 +132,17 @@ def cmd_label(args, cfg, conn):
             "until labelled by hand. Next: `triage label --spot-check 15`."
         )
         return 0
+    if args.reopen:
+        from .labels import reopen
+
+        numbers = [n.strip().lstrip("#") for n in args.reopen.split(",") if n.strip()]
+        found = reopen(path, numbers)
+        missing_ = sorted(set(numbers) - set(found))
+        print(
+            f"reopened {len(found)} rows; run `triage label` to check them again"
+            + (f" (not found or not confirmed: {', '.join(missing_)})" if missing_ else "")
+        )
+        return 0
     if args.spot_check:
         from .suggest import save_spot_check, spot_check_sample
 
@@ -321,6 +332,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     lb.add_argument(
         "--sample-seed", type=int, default=1, help="random seed for --spot-check (default 1)"
+    )
+    lb.add_argument(
+        "--reopen", metavar="N,N,...", help="mark these confirmed rows for checking again"
     )
     lb.add_argument(
         "--stats", action="store_true", help="how many suggestions were changed by hand"

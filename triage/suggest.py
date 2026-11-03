@@ -51,11 +51,17 @@ are suggestions: a person reviews every one. Be accurate, and say briefly why.
 For the issue given, call `{tool}` once with:
 
 type, one of:
-- bug: something that used to work, or is documented to work, and does not.
-- question: the reporter needs help using the product; nothing is broken.
+- bug: something that used to work, or is documented to work, and does not. This includes a
+  problem on one project when the evidence points to a product defect (for example, a
+  hosted service rejecting requests that the docs say are valid).
+- question: the reporter needs help with setup or usage. This includes a technical problem
+  on one project that is not shown to be a product defect (for example, getting a
+  connection or configuration setting to work).
 - feature: a request for new behaviour or an enhancement.
 - docs: the documentation is missing, wrong or unclear.
-- other: spam, meta discussion, support requests about one account, or anything else.
+- other: account or billing matters that only the support team can act on: a restricted or
+  paused project, quotas, plans, signing in to the Supabase dashboard or account. Also spam
+  and empty issue templates. A technical problem on one project is never `other`.
 
 area: the single best match:
 {areas}
@@ -363,9 +369,17 @@ def spot_check_sample(labels_path: Path, k: int, seed: int) -> list[str]:
     """A reproducible random sample of k suggestion-derived rows.
 
     Drawn from every row that came from the suggester (still 'suggested' or already
-    'spot-checked'), sorted by number, so the same seed always gives the same sample.
+    'spot-checked'), sorted by number, so the same seed always gives the same sample. Once
+    a sample is saved in spot_check.json for this seed and size, that saved sample is used,
+    so later relabelling cannot reshuffle it.
     """
     import random
+
+    saved = labels_path.with_name("spot_check.json")
+    if saved.exists():
+        data = json.loads(saved.read_text())
+        if data.get("seed") == seed and len(data.get("sample", [])) == k:
+            return data["sample"]
 
     pool = sorted(
         (
