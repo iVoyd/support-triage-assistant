@@ -1,2 +1,0 @@
-[console_scripts]
-triage = triage.cli:main

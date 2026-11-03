@@ -149,6 +149,8 @@ def cmd_eval(args, cfg, conn):
 
 
 def cmd_show(args, cfg, conn):
+    from .duplicates import describe
+
     rows = conn.execute(
         """SELECT t.*, i.title, i.html_url FROM triage t
            JOIN issues i ON i.repo = t.repo AND i.number = t.number
@@ -165,7 +167,21 @@ def cmd_show(args, cfg, conn):
         print(f"  summary: {r['summary']}")
         if args.drafts:
             print("  draft:\n    " + (r["draft_reply"] or "").replace("\n", "\n    "))
-            print("  docs: " + ", ".join(json.loads(r["retrieved_urls"] or "[]")))
+            print("  docs: " + (", ".join(json.loads(r["retrieved_urls"] or "[]")) or "-"))
+            if r["relevant_docs"] is not None:
+                relevant = json.loads(r["relevant_docs"])
+                print("  judged relevant: " + (", ".join(relevant) or "none"))
+            dups = describe(conn, cfg.repo, r["number"], cfg.model)
+            if dups:
+                print(
+                    "  duplicates: "
+                    + "; ".join(
+                        f"#{d['candidate']} sim={d['similarity']:.2f} "
+                        + {1: "SAME: ", 0: "different: ", None: "not asked"}[d["is_duplicate"]]
+                        + (d["reason"] or "")
+                        for d in dups
+                    )
+                )
         if not r["valid"]:
             print(f"  INVALID: {r['errors']}")
         print(

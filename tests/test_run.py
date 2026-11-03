@@ -95,3 +95,25 @@ def test_cli_run_requires_key(tmp_path, monkeypatch, capsys):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     assert cli.main(["--db", str(tmp_path / "t.db"), "run"]) == 1
     assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+
+
+def test_show_prints_relevant_docs_and_duplicates(tmp_path, capsys, cfg):
+    from tests.test_duplicates import store
+    from triage.db import connect
+    from triage.duplicates import run_duplicates
+
+    db = tmp_path / "t.db"
+    conn = connect(db)
+    setup_db(conn, cfg)
+    store(conn, cfg.repo)
+    run_triage(
+        conn, cfg, FakeAnthropic("claude_valid.json"), 1, numbers=[52547], log=lambda m: None
+    )
+    run_duplicates(
+        conn, cfg, FakeAnthropic("claude_dup_yes.json"), 1, numbers=[52547], log=lambda m: None
+    )
+    conn.close()
+    assert cli.main(["--db", str(db), "show", "--drafts"]) == 0
+    out = capsys.readouterr().out
+    assert "judged relevant: https://supabase.com/docs/guides/auth/passwords" in out
+    assert "duplicates: #52546 sim=0.9" in out and "SAME: Same title" in out
