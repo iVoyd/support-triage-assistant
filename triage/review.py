@@ -234,6 +234,16 @@ def review_loop(
 # ---------- reporting ----------
 
 
+def reviewed_numbers(conn: sqlite3.Connection, repo: str, version: str) -> list[int]:
+    """Issues reviewed under a prompt version, for a like-for-like re-review of a new one."""
+    ensure_table(conn)
+    rows = conn.execute(
+        "SELECT DISTINCT number FROM reviews WHERE repo = ? AND prompt_version = ?",
+        (repo, version),
+    )
+    return sorted((r[0] for r in rows), reverse=True)
+
+
 def review_stats(conn: sqlite3.Connection, repo: str, model: str, version: str) -> dict:
     """Approval rate and edit distance for the latest decision on each reviewed record."""
     ensure_table(conn)

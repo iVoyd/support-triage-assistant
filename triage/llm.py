@@ -118,12 +118,13 @@ def triage_issue(
     allowed_urls: list[str],
     max_attempts: int = 2,
     version: str = "v2",
+    duplicate: int | None = None,
 ) -> TriageResult:
     """Send `request` (from prompt.build_request) and validate the record_triage answer."""
     return call_tool(
         client,
         request,
         TOOL_NAME,
-        lambda out: validate_output(out, areas, allowed_urls, version),
+        lambda out: validate_output(out, areas, allowed_urls, version, duplicate),
         max_attempts,
     )

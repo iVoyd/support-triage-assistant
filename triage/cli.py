@@ -232,10 +232,20 @@ def cmd_eval(args, cfg, conn):
 
 
 def cmd_review(args, cfg, conn):
-    from .review import export_reviews, review_loop, review_stats
+    from .review import export_reviews, review_loop, review_stats, reviewed_numbers
 
     if args.prompt:
         cfg.prompt_version = args.prompt
+    if args.like:
+        args.number = reviewed_numbers(conn, cfg.repo, args.like)
+        if not args.number:
+            print(f"no reviews under prompt {args.like} to repeat")
+            return 1
+        args.limit = max(args.limit, len(args.number))
+        print(
+            f"re-review: {cfg.prompt_version} drafts for the {len(args.number)} issues "
+            f"reviewed under {args.like}"
+        )
     if args.export:
         n = export_reviews(conn, cfg.repo, Path(args.export))
         print(f"wrote {n} decisions to {args.export}")
@@ -393,6 +403,9 @@ def build_parser() -> argparse.ArgumentParser:
     rv.add_argument("--limit", type=int, default=20)
     rv.add_argument("--number", type=int, action="append", help="review this issue (repeatable)")
     rv.add_argument("--prompt", help="prompt version whose drafts to review")
+    rv.add_argument(
+        "--like", metavar="VERSION", help="review only issues already reviewed under VERSION"
+    )
     rv.add_argument("--stats", action="store_true", help="only print the review numbers")
     rv.add_argument("--export", metavar="CSV", help="write every decision to a CSV file")
     rv.set_defaults(func=cmd_review)

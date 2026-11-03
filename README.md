@@ -8,10 +8,10 @@ is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestones 1 and 2 are done: the assistant has been run on real Supabase issues and
-scored against 62 labelled issues (see "Results"). Milestone 3 (review step, prompt v3) is
-built and tested with recorded fixtures. Its first real review session and the v3 eval are
-still to be run. See [SPEC.md](SPEC.md).
+Status: all three milestones are built. The assistant has been run on real Supabase issues,
+scored against 62 labelled issues with prompts v1–v3, and its v3 drafts have had a first
+human review (see "Results"). Prompt v4, which targets the review findings, is written but
+not yet measured. See [SPEC.md](SPEC.md).
 
 ![triage run on 20 real issues](docs/screenshots/run.svg)
 
@@ -272,28 +272,68 @@ every scorecard metric, and end-to-end runs that store records.
 
 ## Results
 
-### Scorecard (Milestone 2)
+### Scorecard
 
-Full tables: [eval/SCORECARD.md](eval/SCORECARD.md) (prompt v2) and
-[eval/SCORECARD-v1.md](eval/SCORECARD-v1.md) (prompt v1), same 62 labels, same day
-(2026-11-03), `claude-haiku-5-5` at effort `low`.
+Full tables:
+- [eval/SCORECARD.md](eval/SCORECARD.md): prompt v3, current labels.
+- [eval/SCORECARD-v2.md](eval/SCORECARD-v2.md) and [eval/SCORECARD-v1.md](eval/SCORECARD-v1.md):
+  prompts v2 and v1, scored on the labels as they were then.
 
-Labels: suggested by claude-sonnet-5-5; a random 15 of 46 hand-checked, 1 corrected
-(estimated label error rate 7%, 95% interval 1–30%). The other 16 were labelled fully by
-hand; there, 4 of the 15 suggestions were changed. Those 16 were the newest issues, not a
-random sample, so they do not enter the error estimate. 31 of the 62 labels are accepted
-suggestions nobody checked.
+All runs: 62 labelled issues, 2026-11-03, `claude-haiku-5-5` at effort `low`.
 
-| Metric | v1 | v2 |
-| --- | --- | --- |
-| Type accuracy | 68% | 68% |
-| Area accuracy | 84% | 79% |
-| Needs-engineer agreement | 81% | 90% |
-| Model says engineer / labels say engineer | 77% / 58% | 48% / 58% |
-| Duplicate precision@1 / recall | 71% / 80% | same (the duplicate check does not depend on the prompt) |
-| Issues where the model found a relevant doc | – | 18 of 62 (29%) |
-| Valid outputs | 61 / 62 | 60 / 62 (both failures: a 4-sentence summary after the retry) |
-| Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s |
+Labels (current): suggested by claude-sonnet-5-5; a random 15 of 35 hand-checked, 2
+corrected (estimated label error rate 13%, 95% interval 4–38%). 27 were labelled fully by
+hand and 20 are accepted suggestions nobody checked.
+
+The 27 hand-labelled rows are:
+- 16 newest issues, labelled by hand
+- 11 rows re-checked under the v3 type rule
+
+Neither group is a random sample, so neither enters the error estimate. One of the two
+spot-check corrections, the area of 52234, was made after the spot-check, when Theo
+re-checked the row.
+
+| Metric | v1 | v2 | v3 |
+| --- | --- | --- | --- |
+| Type accuracy | 68% | 68% | 82% |
+| Area accuracy | 84% | 79% | 81% |
+| Needs-engineer agreement | 81% | 90% | 90% |
+| Model says engineer / labels say engineer | 77% / 58% | 48% / 58% | 52% / 58% |
+| Duplicate precision@1 / recall | 71% / 80% | same | same |
+| Issues where the model found a relevant doc | – | 18 of 62 (29%) | 18 of 62 (29%) |
+| Valid outputs | 61 / 62 | 60 / 62 | 61 / 62 |
+| Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s | $0.00079 / 5.5 s |
+
+The v1 and v2 columns were scored before 12 labels changed (11 type re-checks under the v3
+rule, plus the area of 52234). The v3 gain in type accuracy therefore mixes the prompt change
+with the relabelling; `eval/CHANGELOG.md` has the like-for-like comparison once v2 is
+re-scored on the current labels. Duplicate precision and recall do not depend on the prompt.
+
+### Human review (prompt v3, 20 drafts)
+
+![triage review: one draft](docs/screenshots/review.svg)
+
+| | |
+| --- | --- |
+| Approved as is | 2 (10%) |
+| Approved after edits | 17 |
+| Rejected | 1 |
+| Mean edit distance, edited drafts | 0.47 (word-level, 0 = unchanged, 1 = rewritten) |
+
+Almost every draft was usable (19 of 20), but almost none could be sent as written.
+Theo's edits, by kind:
+
+1. **Asked for information already in the issue** (about 8 drafts). The screenshot shows
+   one: the draft asks for `node -v` when the issue already says Node 22.22.3.
+2. **Talked about its own inputs** ("no documentation I have", "the excerpts provided"),
+   5 drafts.
+3. **Ignored a duplicate the duplicate step had confirmed**, 4 drafts. 52565 was rejected
+   for this. The cause is the pipeline: triage ran before the duplicate check, so the draft
+   could not know.
+4. **Cited or promised a docs link without including it**, 3 drafts.
+5. **Claimed an action it cannot take** ("I've labelled this"), 1 draft.
+
+Prompt v4 targets each of these; see `eval/CHANGELOG.md`.
 
 Labelling rules Theo followed:
 
@@ -315,7 +355,7 @@ Labelling rules Theo followed:
 
   Both are candidate misses, not wrong judgements on candidates the suggester saw.
 
-What the numbers say:
+What the v1 → v2 numbers said (v3 above addresses the type point):
 
 - **v2 fixed the over-flagging.** v1 called for an engineer on 77% of issues against 58% in
   the labels; v2 says 48%, slightly under. Agreement went from 81% to 90%.

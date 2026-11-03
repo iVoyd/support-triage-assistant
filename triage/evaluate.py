@@ -226,11 +226,7 @@ def evaluate(
     numbers = [int(r["number"]) for r in rows]
 
     if client is not None:
-        have = latest_records(conn, cfg, numbers)
-        todo = [n for n in numbers if n not in have]
-        if todo:
-            log(f"triaging {len(todo)} labelled issues with {cfg.model} {cfg.prompt_version}")
-            run_triage(conn, cfg, client, len(todo), numbers=todo, log=log)
+        # duplicates first: from prompt v4 on, triage sees the duplicate check's verdict
         checked = {
             r[0]
             for r in conn.execute(
@@ -242,6 +238,11 @@ def evaluate(
         if todo:
             log(f"checking {len(todo)} labelled issues for duplicates")
             run_duplicates(conn, cfg, client, len(todo), numbers=todo, log=log)
+        have = latest_records(conn, cfg, numbers)
+        todo = [n for n in numbers if n not in have]
+        if todo:
+            log(f"triaging {len(todo)} labelled issues with {cfg.model} {cfg.prompt_version}")
+            run_triage(conn, cfg, client, len(todo), numbers=todo, log=log)
 
     records = latest_records(conn, cfg, numbers)
     scored = [r for r in rows if int(r["number"]) in records]

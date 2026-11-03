@@ -4,6 +4,30 @@ Each prompt change, why it was made, and its effect on the scorecard. Both versi
 `triage/prompt.py`, so `triage eval --prompt v1` and `--prompt v2` can be compared on the
 same labels.
 
+## v4 (proposed)
+
+Why: in Theo's first review of 20 v3 drafts, only 2 went out unchanged (mean edit distance
+0.47). His edits fell into five kinds; v4 targets each:
+
+| Review finding | Drafts | v4 change |
+| --- | --- | --- |
+| Asks for information already in the issue | ~8 | Prompt: re-read body and first comment; ask only for what is missing (not checkable in code) |
+| Talks about its own inputs ("the excerpts provided") | 5 | Prompt rule, plus a check that sends such drafts back once |
+| Ignores a duplicate the duplicate step confirmed | 4 | The confirmed duplicate goes into the prompt; the draft must name it by number (checked). `triage eval` now runs duplicate checks before triage |
+| Cites or promises a link without including it | 3 | Prompt rule, plus a check: "see the link below" with no URL is sent back |
+| Claims an action ("I've labelled this") | 1 | Labelled, tagged, assigned, closed and moved join the claimed-action check |
+
+v4 is v3 plus one inserted block of draft rules (tested), and the issue message gains a
+`<likely_duplicate>` element when one was confirmed. The new checks apply to v4 only, so
+v1–v3 results stay reproducible. v3 stays the default until v4 is measured.
+
+Measure: `triage eval --prompt v4 --out eval/SCORECARD-v4.md` (classification should not
+get worse), then `triage review --prompt v4 --like v3`, which re-reviews the same 20 issues.
+v4 is better if the approval rate rises and the edit distance falls, without losing type,
+area or needs-engineer accuracy.
+
+Score delta vs v3: pending.
+
 ## v3
 
 Why: in the v2 scorecard, 14 of 20 type misses were issues labelled `other` that the model
@@ -23,7 +47,24 @@ the prompt are generic on purpose. Theo's examples were issues from the labelled
 Labels: some rows labelled `other` before this rule may now be `question` or `bug`. Theo
 re-checks them with `triage label --reopen` before the v3 eval.
 
-Score delta vs v2: pending the v3 eval run.
+Score delta vs v2 (`eval/SCORECARD.md` vs `eval/SCORECARD-v2.md`):
+
+| Metric | v2 | v3 |
+| --- | --- | --- |
+| Type accuracy | 68% | 82% |
+| Area accuracy | 79% | 81% |
+| Needs-engineer agreement | 90% | 90% |
+| Model says engineer / labels say engineer | 48% / 58% | 52% / 58% |
+| Avg cost per issue | $0.00083 | $0.00079 |
+
+These deltas are provisional. Between the two runs Theo changed 12 labels: 11 type
+re-checks under the new rule, and the area of 52234. So the type gain mixes the prompt
+change with the relabelling. Re-scoring the stored v2 records on the current labels
+(`triage eval --prompt v2 --no-run --out eval/SCORECARD-v2-relabelled.md`, no API calls)
+separates the two.
+
+First human review (v3, 20 drafts): 2 approved as is, 17 edited, 1 rejected, mean edit
+distance 0.47.
 
 ## v2 (Milestone 2)
 

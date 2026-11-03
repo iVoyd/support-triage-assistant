@@ -163,3 +163,24 @@ def test_cli_review_stats(tmp_path, capsys, cfg):
     conn.close()
     assert cli.main(["--db", str(db), "review", "--stats"]) == 0
     assert "1 drafts, 1 approved as is (100%)" in capsys.readouterr().out
+
+
+def test_like_reviews_the_same_issues_under_a_new_prompt(conn, cfg, tmp_path, capsys):
+    from triage.review import reviewed_numbers
+
+    triaged(conn, cfg, 2)
+    review_loop(conn, cfg, 1, ask=lambda _: "a", out=lambda m: None)  # reviews 40012 under v3
+    assert reviewed_numbers(conn, cfg.repo, "v3") == [40012]
+    # a v4 record for the same issue (copied from the v3 one)
+    conn.execute(
+        """INSERT INTO triage (repo, number, model, prompt_version, type, area, severity,
+               needs_engineer, needs_engineer_reason, summary, draft_reply, confidence,
+               retrieved_urls, valid, errors, created_at)
+           SELECT repo, number, model, 'v4', type, area, severity, needs_engineer,
+               needs_engineer_reason, summary, draft_reply, confidence, retrieved_urls, valid,
+               errors, created_at FROM triage WHERE number = 40012"""
+    )
+    conn.commit()
+    cfg.prompt_version = "v4"
+    offered = pick_unreviewed(conn, cfg, 10, reviewed_numbers(conn, cfg.repo, "v3"))
+    assert [r["number"] for r in offered] == [40012]
