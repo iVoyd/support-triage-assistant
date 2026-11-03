@@ -1,0 +1,37 @@
+{
+  "id": "msg_01",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgIAxABGAIiQK..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_01",
+      "name": "record_triage",
+      "input": {
+        "type": "bug",
+        "area": "auth",
+        "severity": "medium",
+        "needs_engineer": true,
+        "needs_engineer_reason": "Confirmed users should be able to sign in; this may be a regression in supabase-js 2.45.1.",
+        "summary": "After confirming their email, the user cannot sign in with signInWithPassword and gets 'Invalid login credentials'. They expect sign-in to work once the email is confirmed.",
+        "draft_reply": "Thanks for the report. 'Invalid login credentials' usually means the email/password pair does not match, while an unconfirmed email returns 'Email not confirmed' (see https://supabase.com/docs/guides/auth/passwords#signing-in-with-an-email-and-password). Could you share the auth logs for one failed attempt and confirm the project's email settings?",
+        "confidence": 0.78
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 900,
+    "output_tokens": 350,
+    "cache_creation_input_tokens": 1450,
+    "cache_read_input_tokens": 0
+  }
+}
