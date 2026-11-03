@@ -41,6 +41,12 @@ other = "Anything that fits none of the above"
 candidates = 5          # TF-IDF candidates per issue
 min_similarity = 0.2    # cosine below this: no model call, "no duplicate"
 
+[labels]
+# `triage label --suggest` pre-fills labels with this model. It must differ from
+# [triage] model (the one being evaluated); a person still confirms every row.
+suggest_model = "claude-sonnet-5-5"
+suggest_effort = "medium"
+
 # Seeding eval/labels.csv: GitHub label -> our value. Unmapped labels are ignored.
 [labels.types]
 bug = "bug"
@@ -68,3 +74,9 @@ input = 0.10
 output = 0.50
 cache_write = 0.125
 cache_read = 0.01
+
+[prices.claude-sonnet-5-5]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_read = 0.20

@@ -235,7 +235,10 @@ def evaluate(
             WHERE repo = ? AND model = ? AND number IN ({marks})""",
         (cfg.repo, cfg.model, *numbers),
     ).fetchone()
+    from .suggest import change_stats
+
     return {
+        "labels": change_stats(labels_path, labels_path.with_name("suggestions.csv")),
         "date": datetime.now(UTC).strftime("%Y-%m-%d"),
         "repo": cfg.repo,
         "model": cfg.model,
@@ -266,6 +269,18 @@ def pct(x) -> str:
     return "–" if x is None else f"{x:.0%}"
 
 
+def labels_note(st: dict | None) -> str:
+    """Where the labels came from, e.g. for the README and the scorecard header."""
+    if not st or not st["suggested"]:
+        return "Labels: entered by hand (some seeded from GitHub labels), all reviewed by Theo."
+    fields = ", ".join(f"{f} {n}" for f, n in st["per_field"].items() if n)
+    return (
+        f"Labels: suggested by a larger model ({', '.join(st['models'])}), then reviewed and "
+        f"corrected by hand; {st['changed']} of {st['suggested']} changed"
+        + (f" ({fields})." if fields else ".")
+    )
+
+
 def write_scorecard(report: dict, path: Path) -> None:
     t, a, e, d, rt = (
         report[k] for k in ("type", "area", "needs_engineer", "duplicates", "retrieval")
@@ -283,6 +298,7 @@ def write_scorecard(report: dict, path: Path) -> None:
             if report["confirmed_only"]
             else " (including unconfirmed seed labels, so treat these numbers as rough)."
         ),
+        labels_note(report.get("labels")),
         "",
         "| Metric | Value | n |",
         "| --- | --- | --- |",

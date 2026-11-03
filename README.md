@@ -58,8 +58,12 @@ flowchart LR
    which answers "same underlying problem?" with a reason for each. Issues with nothing
    similar cost no API call.
 7. `triage label --seed` writes `eval/labels.csv` with ~60 issues: recent issues closed as
-   duplicates (with their targets), the issues already triaged, then issues whose GitHub
-   labels map to our values. `triage label` walks the unconfirmed rows for a quick check.
+   duplicates (with their targets, read from GitHub's close event), the issues already
+   triaged, then issues whose GitHub labels map to our values. `triage label --suggest`
+   asks a larger model (`claude-sonnet-5-5` by default, never the model being evaluated)
+   to propose type, area, needs-engineer and duplicate for each unconfirmed row, with a
+   one-line reason per field. `triage label` then walks the rows: Enter accepts, an edit
+   corrects, and each confirmed row records which suggested fields were changed.
 8. `triage eval` triages and duplicate-checks any labelled issue that has no record for the
    current model and prompt version, then writes `eval/SCORECARD.md`.
 
@@ -132,13 +136,25 @@ triage label --seed --n 60
 ```
 
 ```bash
+triage label --suggest
+```
+
+```bash
 triage label
 ```
 
-For each row: Enter accepts the values shown, or type fixes such as `t=b a=auth e=n`
-(type, area, needs engineer), `d=52546` (duplicate of), `u=<docs URL>` or `u=none` (the
-docs page that answers it, optional), then Enter. `s` skips, `q` quits; every answer is
-saved immediately, so you can stop and continue later.
+`--suggest` costs about 1–2 cents per row with Sonnet 5.5 (around $1 for 60 rows; the run
+prints the total). In `triage label`, each row shows the suggestion with a reason per field.
+Enter accepts the values shown, or type fixes such as `t=b a=auth e=n` (type, area, needs
+engineer), `d=52546` or `d=-` (duplicate of), `u=<docs URL>` or `u=none` (the docs page
+that answers it, optional), then Enter. `s` skips, `q` quits; every answer is saved
+immediately, so you can stop and continue later.
+
+```bash
+triage label --stats
+```
+
+shows how many suggestions you changed. Then:
 
 ```bash
 triage eval
@@ -173,6 +189,22 @@ every scorecard metric, and end-to-end runs that store records.
 
 The evaluation scorecard will be in [eval/SCORECARD.md](eval/SCORECARD.md) after the first
 labelled run.
+
+How the labels were made: labels suggested by a larger model, then reviewed and corrected by
+hand; N of 60 changed. (N is filled in from `triage label --stats` after the labelling run;
+the scorecard header carries the same line, generated from the data.)
+
+The suggester is kept separate from the system it helps evaluate:
+- **Different model:** it is `claude-sonnet-5-5`, not the evaluated `claude-haiku-5-5`, and
+  `triage label --suggest` refuses to run if the two are the same.
+- **Blind to the assistant:** it never sees triage records, retrieved docs or the
+  assistant's duplicate checks.
+- **Independent duplicate candidates:** these come from GitHub's own search, not from the
+  TF-IDF step under test.
+- **Stored separately:** suggestions are kept in `eval/suggestions.csv`, apart from the
+  final answers in `eval/labels.csv`.
+- **Some bias remains:** a reviewer accepting suggestions can still lean towards them, so
+  per-field change counts are reported to show how much was corrected.
 
 ### First run (Milestone 1, prompt v1)
 
@@ -257,7 +289,8 @@ duplicate detection. The scorecard measures each one against labels.
 - Duplicate detection only compares against issues already in the database (the newest
   300 plus the seeded duplicate examples), and TF-IDF misses duplicates described in
   different words.
-- Labels are one person's judgement, and small classes give noisy per-class numbers.
+- Labels are one person's judgement, helped by a larger model's suggestions, and small
+  classes give noisy per-class numbers.
 - Doc anchors are generated from headings in GitHub style. Most match the live site, but
   some generated anchors may not.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.

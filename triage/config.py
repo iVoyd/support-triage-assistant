@@ -38,6 +38,9 @@ class Config:
     # GitHub label name -> our value, used to seed eval/labels.csv
     label_types: dict[str, str] = field(default_factory=dict)
     label_areas: dict[str, str] = field(default_factory=dict)
+    # `triage label --suggest`: a larger model than the one being evaluated
+    suggest_model: str = "claude-sonnet-5-5"
+    suggest_effort: str = "medium"
 
     def price_for(self, model: str) -> Prices | None:
         return self.prices.get(model)
@@ -71,4 +74,6 @@ def load_config(path: str | Path) -> Config:
         dup_min_similarity=float(dups.get("min_similarity", 0.2)),
         label_types=dict(labels.get("types", {})),
         label_areas=dict(labels.get("areas", {})),
+        suggest_model=labels.get("suggest_model", "claude-sonnet-5-5"),
+        suggest_effort=labels.get("suggest_effort", "medium"),
     )

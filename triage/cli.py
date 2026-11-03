@@ -108,6 +108,37 @@ def cmd_label(args, cfg, conn):
     from .labels import fetch_duplicate_examples, label_loop, seed_labels
 
     path = Path(args.file)
+    suggestions_path = path.with_name("suggestions.csv")
+    if args.stats:
+        from .suggest import change_stats
+
+        st = change_stats(path, suggestions_path)
+        fields = ", ".join(f"{f} {n}" for f, n in st["per_field"].items())
+        print(
+            f"{st['confirmed']} rows confirmed; {st['suggested']} of them had a suggestion "
+            f"({', '.join(st['models']) or 'none'}); {st['changed']} of {st['suggested']} "
+            f"changed by hand (per field: {fields})"
+        )
+        return 0
+    if args.suggest:
+        from .github import GitHubClient
+        from .suggest import suggest_labels
+
+        if not path.exists():
+            print(f"{path} does not exist yet; run `triage label --seed` first.")
+            return 1
+        client = _client()
+        if client is None:
+            return 1
+        if args.suggest_model:
+            cfg.suggest_model = args.suggest_model
+        gh = GitHubClient(token=os.environ.get("GITHUB_TOKEN"))
+        totals = suggest_labels(conn, cfg, client, gh, path, suggestions_path)
+        print(
+            f"done: {totals['suggested']} rows suggested, {totals['failed']} failed, "
+            f"total ${totals['cost_usd']:.3f}. Now run `triage label` to review them."
+        )
+        return 0
     if args.seed:
         duplicates = {}
         if args.dups:
@@ -124,7 +155,7 @@ def cmd_label(args, cfg, conn):
     if not path.exists():
         print(f"{path} does not exist yet; run `triage label --seed` first.")
         return 1
-    result = label_loop(conn, cfg, path)
+    result = label_loop(conn, cfg, path, suggestions_path=suggestions_path)
     print(f"confirmed {result['confirmed']} rows; {result['remaining']} left unconfirmed")
     return 0
 
@@ -237,6 +268,15 @@ def build_parser() -> argparse.ArgumentParser:
     lb.add_argument("--file", default="eval/labels.csv")
     lb.add_argument("--seed", action="store_true", help="add pre-filled rows, keep existing ones")
     lb.add_argument("--n", type=int, default=60, help="target number of rows when seeding")
+    lb.add_argument(
+        "--suggest",
+        action="store_true",
+        help="pre-fill unconfirmed rows with a larger model's suggestions (you still confirm)",
+    )
+    lb.add_argument("--suggest-model", help="override [labels] suggest_model")
+    lb.add_argument(
+        "--stats", action="store_true", help="how many suggestions were changed by hand"
+    )
     lb.add_argument(
         "--dups", type=int, default=15, help="closed-as-duplicate issues to fetch (0 = none)"
     )

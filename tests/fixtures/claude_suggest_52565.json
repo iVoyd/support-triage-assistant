@@ -1,0 +1,37 @@
+{
+  "id": "s3",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgI..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_s3",
+      "name": "record_labels",
+      "input": {
+        "type": "bug",
+        "type_reason": "Valid tokens are rejected.",
+        "area": "auth",
+        "area_reason": "Auth-issued JWTs rejected by the Data API.",
+        "needs_engineer": true,
+        "needs_engineer_reason": "Looks like a server-side clock or validation defect.",
+        "duplicate_of": 0,
+        "duplicate_of_reason": "52541 is a 401 right after sign-in, not 'issued at future'."
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 2400,
+    "output_tokens": 600,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

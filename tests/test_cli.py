@@ -64,3 +64,24 @@ def test_dups_and_eval_need_a_key(tmp_path, monkeypatch, capsys):
     assert cli.main(["--db", db, "dups"]) == 1
     assert cli.main(["--db", db, "eval"]) == 1
     assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+
+
+def test_label_stats_and_suggest_need_key(tmp_path, capsys, monkeypatch):
+    labels = tmp_path / "labels.csv"
+    write_labels(
+        labels,
+        [
+            {
+                "number": "1",
+                "type": "bug",
+                "area": "auth",
+                "needs_engineer": "no",
+                "confirmed": "yes",
+            }
+        ],
+    )
+    db = str(tmp_path / "t.db")
+    assert cli.main(["--db", db, "label", "--stats", "--file", str(labels)]) == 0
+    assert "1 rows confirmed; 0 of them had a suggestion" in capsys.readouterr().out
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert cli.main(["--db", db, "label", "--suggest", "--file", str(labels)]) == 1

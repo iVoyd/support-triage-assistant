@@ -29,6 +29,7 @@ COLUMNS = [
     "confirmed",  # yes once Theo has checked the row
     "seed",  # where the pre-filled values came from
     "notes",
+    "changed",  # on confirm: suggested fields Theo changed ("none" if he kept them all)
 ]
 DUP_REF = re.compile(r"(?:duplicate of|dupe of|duplicates|same as|see)\s*#(\d+)", re.IGNORECASE)
 HASH_REF = re.compile(r"(?<![\w/])#(\d+)\b")
@@ -260,6 +261,19 @@ def example(row: dict) -> str:
     return " ".join(parts)
 
 
+def show_suggestion(s: dict, out: Callable[[str], None]) -> None:
+    out(f"  suggested by {s['model']} (check it):")
+    dup = s["duplicate_of"] if str(s["duplicate_of"]) not in ("0", "") else "-"
+    for field, value in (
+        ("type", s["type"]),
+        ("area", s["area"]),
+        ("engineer", s["needs_engineer"]),
+        ("duplicate_of", dup),
+    ):
+        key = "needs_engineer" if field == "engineer" else field
+        out(f"    {field}={value}: {s.get(key + '_reason', '')}")
+
+
 def show(row: dict, issue: dict | None, out: Callable[[str], None]) -> None:
     out("")
     out(f"#{row['number']} {issue['title'] if issue else row['title']}")
@@ -288,7 +302,11 @@ def label_loop(
     path: Path,
     ask: Callable[[str], str] = input,
     out: Callable[[str], None] = print,
+    suggestions_path: Path | None = None,
 ) -> dict:
+    from .suggest import changed_fields, read_suggestions
+
+    suggestions = read_suggestions(suggestions_path) if suggestions_path else {}
     rows = read_labels(path)
     todo = [r for r in rows if r["confirmed"] != "yes"]
     areas = ", ".join(cfg.areas)
@@ -301,6 +319,8 @@ def label_loop(
             "SELECT * FROM issues WHERE repo = ? AND number = ?", (cfg.repo, int(row["number"]))
         ).fetchone()
         show(row, dict(issue) if issue else None, out)
+        if row["number"] in suggestions:
+            show_suggestion(suggestions[row["number"]], out)
         while True:
             try:
                 answer = ask("  > ").strip()
@@ -330,6 +350,8 @@ def label_loop(
                 )
                 continue
             row["confirmed"] = "yes"
+            if row["number"] in suggestions:
+                row["changed"] = ",".join(changed_fields(row, suggestions[row["number"]])) or "none"
             write_labels(path, rows)
             done += 1
             break
