@@ -145,3 +145,18 @@ def test_evaluate_end_to_end_runs_missing_records_and_writes_scorecard(conn, cfg
     # scoring again needs no new calls
     again = evaluate(conn, cfg, labels, FakeAnthropic(), log=lambda m: None)
     assert again["n"] == 1
+
+
+def test_issues_line_says_how_labels_were_made():
+    from triage.evaluate import issues_line, label_counts
+
+    rows = [
+        {"confirmed": "yes", "source": ""},
+        {"confirmed": "yes", "source": "spot-checked"},
+        {"confirmed": "", "source": "suggested"},
+        {"confirmed": "", "source": "suggested"},
+    ]
+    assert issues_line({"n": 4, "label_counts": label_counts(rows)}) == (
+        "4 labelled issues: 2 checked by hand (1 fully, 1 spot-checked); "
+        "2 accepted from the suggester without a check."
+    )

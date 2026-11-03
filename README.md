@@ -8,10 +8,9 @@ is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestone 1 (data + triage) is done and was run on 20 real Supabase issues.
-Milestone 2 (duplicates, labels, evaluation) is built and tested with recorded fixtures;
-the first real scorecard still needs labels confirmed by Theo and one eval run (see
-"Evaluate"). Milestone 3 (review step) is not started. See [SPEC.md](SPEC.md).
+Status: Milestones 1 and 2 are done. The assistant has been run on real Supabase issues
+and scored against 62 labelled issues (see "Results"). Milestone 3 (review step) is not
+started. See [SPEC.md](SPEC.md).
 
 ## How it works
 
@@ -217,29 +216,52 @@ every scorecard metric, and end-to-end runs that store records.
 
 ## Results
 
-The evaluation scorecard will be in [eval/SCORECARD.md](eval/SCORECARD.md) after the first
-labelled run.
+### Scorecard (Milestone 2)
 
-How the labels were made: filled in after the labelling run from `triage label --stats`. The
-scorecard header carries the same line, generated from the data. On the quick path it reads
-"Labels: suggested by claude-sonnet-5-5; a random 15 of 60 hand-checked, N corrected
-(estimated label error rate X%)."; on the full path, "labels suggested by a larger model,
-then reviewed and corrected by hand; N of 60 changed".
+Full tables: [eval/SCORECARD.md](eval/SCORECARD.md) (prompt v2) and
+[eval/SCORECARD-v1.md](eval/SCORECARD-v1.md) (prompt v1), same 62 labels, same day
+(2026-11-03), `claude-haiku-5-5` at effort `low`.
 
-The suggester is kept separate from the system it helps evaluate:
-- **Different model:** it is `claude-sonnet-5-5`, not the evaluated `claude-haiku-5-5`, and
-  `triage label --suggest` refuses to run if the two are the same.
-- **Blind to the assistant:** it never sees triage records, retrieved docs or the
-  assistant's duplicate checks.
-- **Independent duplicate candidates:** these come from GitHub's own search, not from the
-  TF-IDF step under test.
-- **Stored separately:** suggestions are kept in `eval/suggestions.csv`, apart from the
-  final answers in `eval/labels.csv`.
-- **Some bias remains:** a reviewer accepting suggestions can still lean towards them, so
-  per-field change counts are reported to show how much was corrected.
-- **Quick path caveat:** on the quick path most labels are the suggester's own answers, so
-  scores measure agreement with Sonnet 5.5 as much as with a person. The spot-check error
-  rate says how far to trust them.
+Labels: suggested by claude-sonnet-5-5; a random 15 of 46 hand-checked, 1 corrected
+(estimated label error rate 7%, 95% interval 1–30%). The other 16 were labelled fully by
+hand; there, 4 of the 15 suggestions were changed. Those 16 were the newest issues, not a
+random sample, so they do not enter the error estimate. 31 of the 62 labels are accepted
+suggestions nobody checked.
+
+| Metric | v1 | v2 |
+| --- | --- | --- |
+| Type accuracy | 68% | 68% |
+| Area accuracy | 84% | 79% |
+| Needs-engineer agreement | 81% | 90% |
+| Model says engineer / labels say engineer | 77% / 58% | 48% / 58% |
+| Duplicate precision@1 / recall | 71% / 80% | same (the duplicate check does not depend on the prompt) |
+| Issues where the model found a relevant doc | – | 18 of 62 (29%) |
+| Valid outputs | 61 / 62 | 60 / 62 |
+| Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s |
+
+What the numbers say:
+
+- **v2 fixed the over-flagging.** v1 called for an engineer on 77% of issues against 58% in
+  the labels; v2 says 48%, slightly under. Agreement went from 81% to 90%.
+- **Most type errors come from a definition mismatch, not from triage.** 16 labels are
+  `other`, almost all support requests about one account or project ("Can't sign into
+  dashboard", "Project Restricted – Storage Quota"). The suggester's guide puts those under
+  `other`; the triage prompt says `other` means spam or meta discussion, so the model calls
+  14 of them `bug` or `question`. The area mix-ups (labels `platform`, model `database` or
+  `auth`) have the same cause. One definition has to change; see "Next".
+- **Retrieval is the weakest part.** By the model's own judgement only 22 of the 301 doc
+  excerpts sent were relevant. Raising `min_score` from 20 to 50 would drop 32 of the 279
+  irrelevant ones and 2 of the relevant ones, so the threshold is not a fix. Many issues are
+  about the hosted platform or the dashboard, which the guides do not cover.
+- **Duplicates:** of 17 issues flagged as duplicates, 12 named the right issue; of 15
+  labelled duplicates, 12 were found. Duplicate labels count in both directions and within
+  groups.
+- **Cost:** about $0.05 to triage 62 issues, $0.016 for the duplicate checks, and $0.67 for
+  the Sonnet 5.5 label suggestions.
+
+Next: decide whether account-specific support requests are `other` (change the triage
+prompt) or `question`/`bug` (relabel), then re-run `triage eval`; and improve retrieval or
+send fewer excerpts.
 
 ### First run (Milestone 1, prompt v1)
 
@@ -313,13 +335,14 @@ duplicate detection. The scorecard measures each one against labels.
 
 ## Limitations
 
-- Retrieval is keyword-based (BM25). Raw BM25 scores do not separate good matches from
-  junk well (a test on the first run's issues found overlap), so `min_score = 20` is a first
-  guess until the scorecard's sweep table gives real numbers. For dashboard and platform
-  issues the guides often have nothing relevant.
-- `needs_engineer` leaned towards true with prompt v1 (19/20). v2 narrows the definition;
-  where the line sits (feature requests, single-project support requests) is a judgement
-  call that the labels settle.
+- Retrieval is keyword-based (BM25) and weak here: the model judged only 22 of 301 excerpts
+  relevant in the eval run, and no `min_score` separates good from bad. Many issues are
+  about the hosted platform or dashboard, which the guides do not cover.
+- The label guide and the triage prompt define `other` differently (account-specific
+  support requests), which holds type accuracy down until one of them changes.
+- v2 slightly under-flags `needs_engineer` (48% vs 58% in the labels).
+- Half the labels are accepted model suggestions; a random spot-check of 15 puts their
+  error rate at 7% (95% interval 1–30%).
 - The claimed-action check is a list of phrases, so new wordings can slip through.
 - Duplicate detection only compares against issues already in the database (the newest
   300 plus the seeded duplicate examples), and TF-IDF misses duplicates described in

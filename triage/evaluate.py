@@ -291,6 +291,7 @@ def evaluate(
         "top_k": cfg.top_k,
         "n": len(scored),
         "confirmed_only": not unconfirmed,
+        "label_counts": label_counts(scored),
         "type": classification(type_pairs, TYPES),
         "area": classification(area_pairs, list(cfg.areas)),
         "needs_engineer": agreement(eng_pairs),
@@ -310,6 +311,32 @@ def evaluate(
 
 def pct(x) -> str:
     return "–" if x is None else f"{x:.0%}"
+
+
+def label_counts(rows: list[dict]) -> dict:
+    """How the scored labels were made: checked fully, spot-checked, accepted, unconfirmed."""
+    counts = {"hand": 0, "spot-checked": 0, "suggested": 0, "unconfirmed": 0}
+    for r in rows:
+        if r["confirmed"] == "yes":
+            counts["spot-checked" if r["source"] == "spot-checked" else "hand"] += 1
+        elif r["source"] == "suggested":
+            counts["suggested"] += 1
+        else:
+            counts["unconfirmed"] += 1
+    return counts
+
+
+def issues_line(report: dict) -> str:
+    c = report.get("label_counts")
+    if not c:
+        return f"{report['n']} labelled issues."
+    checked = c["hand"] + c["spot-checked"]
+    parts = [f"{checked} checked by hand ({c['hand']} fully, {c['spot-checked']} spot-checked)"]
+    if c["suggested"]:
+        parts.append(f"{c['suggested']} accepted from the suggester without a check")
+    if c["unconfirmed"]:
+        parts.append(f"{c['unconfirmed']} unconfirmed seed labels, so treat these as rough")
+    return f"{report['n']} labelled issues: " + "; ".join(parts) + "."
 
 
 def labels_note(st: dict | None) -> str:
@@ -353,12 +380,7 @@ def write_scorecard(report: dict, path: Path) -> None:
         f"model `{report['model']}` (effort `{report['effort']}`), prompt "
         f"`{report['prompt_version']}`, top_k {report['top_k']}, "
         f"min_score {report['min_score']:g}.",
-        f"{report['n']} labelled issues"
-        + (
-            " (confirmed by Theo)."
-            if report["confirmed_only"]
-            else " (including unconfirmed seed labels, so treat these numbers as rough)."
-        ),
+        issues_line(report),
         labels_note(report.get("labels")),
         "",
         "| Metric | Value | n |",
