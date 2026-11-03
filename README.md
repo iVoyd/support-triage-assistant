@@ -7,9 +7,9 @@ posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestone 1 (data + triage) is built and tested against recorded fixtures. A real
-20-issue run is still to be done (see "Results"). Milestones 2–3 (duplicates, eval
-scorecard, review step) are not started. See [SPEC.md](SPEC.md).
+Status: Milestone 1 (data + triage) is done: tested with recorded fixtures and run on 20
+real Supabase issues (see "Results"). Milestones 2–3 (duplicates, eval scorecard, review
+step) are not started. See [SPEC.md](SPEC.md).
 
 ## How it works
 
@@ -119,21 +119,36 @@ end-to-end run that stores records.
 
 ## Results
 
-No real run yet. The build environment could not reach the GitHub API or the Anthropic
-API. What was checked against real data: `triage docs` on the current Supabase repo indexes
-590 guide files into 5,849 chunks in about 3 seconds, and BM25 puts the right guide section
-first for the sample issues used in the tests.
+First real run: 20 recent `supabase/supabase` issues, `claude-haiku-5-5` at effort `low`,
+prompt `v1`, run by Theo on his own machine.
 
-Rough cost expectation (not measured): about 3k input tokens and a few hundred output
-tokens per issue on Haiku 5.5, which is well under a tenth of a cent per issue. The real
-numbers will appear in `triage show` and will replace this paragraph.
+| Metric | Value |
+| --- | --- |
+| Issues triaged | 20 |
+| Valid records (passed all output checks) | 20 / 20 |
+| Average cost per issue | $0.00084 |
+| Total cost (20 issues) | about $0.017 |
+| Average latency per issue | 5.7 s |
+| Prompt cache | `cache_read` > 0 from the second issue on |
 
-The evaluation scorecard arrives with Milestone 2.
+`triage docs` indexes the current Supabase guides (590 files) into 5,849 chunks in about
+3 seconds.
+
+What the first run showed, by reading the output (not yet measured against labels):
+
+- `needs_engineer` was true for 19 of 20 issues, which looks like over-flagging.
+- Retrieval sometimes returned unrelated docs ([supabase#52554](https://github.com/supabase/supabase/issues/52554), [supabase#52582](https://github.com/supabase/supabase/issues/52582), [supabase#52537](https://github.com/supabase/supabase/issues/52537)). BM25 always returns
+  its top 5, even when none of them is a good match.
+- [supabase#52546](https://github.com/supabase/supabase/issues/52546) and [supabase#52547](https://github.com/supabase/supabase/issues/52547) are duplicates of each other; duplicate detection comes in Milestone 2.
+
+These are the starting points for Milestone 2, which adds a labelled set and a scorecard
+(type/area accuracy, needs-engineer agreement, retrieval hit rate, duplicate precision).
 
 ## Limitations
 
-- Retrieval is keyword-based (BM25). Issues phrased very differently from the docs get
-  weak or no excerpts; the draft then asks for details instead of citing.
+- Retrieval is keyword-based (BM25) with no relevance cut-off yet, so weak matches still
+  reach the prompt and can be cited.
+- `needs_engineer` currently leans towards true (19/20 in the first run).
 - Doc anchors are generated from headings in GitHub style. Most match the live site, but
   some generated anchors may not.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.
