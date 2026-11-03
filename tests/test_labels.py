@@ -136,3 +136,17 @@ def test_label_loop_saves_each_answer(conn, cfg, tmp_path):
     rows = {r["number"]: r for r in read_labels(path)}
     assert rows["52547"]["confirmed"] == "yes" and rows["52547"]["needs_engineer"] == "no"
     assert rows["52546"]["confirmed"] == ""
+
+
+def test_ctrl_c_quits_cleanly(conn, cfg, tmp_path):
+    found = fetch_duplicate_examples(gh(), conn, cfg, 10, log=lambda m: None)
+    path = tmp_path / "labels.csv"
+    seed_labels(conn, cfg, path, 2, found)
+
+    def interrupt(_):
+        raise KeyboardInterrupt
+
+    assert label_loop(conn, cfg, path, ask=interrupt, out=lambda m: None) == {
+        "confirmed": 0,
+        "remaining": 2,
+    }

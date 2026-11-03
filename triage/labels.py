@@ -276,7 +276,11 @@ def label_loop(
         ).fetchone()
         show(row, dict(issue) if issue else None, out)
         while True:
-            answer = ask("  > ").strip()
+            try:
+                answer = ask("  > ").strip()
+            except (KeyboardInterrupt, EOFError):  # Ctrl-C / Ctrl-D: same as q
+                out("")
+                answer = "q"
             if answer == "q":
                 return {"confirmed": done, "remaining": len(todo) - done}
             if answer == "s":
