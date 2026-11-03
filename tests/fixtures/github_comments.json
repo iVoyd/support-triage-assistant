@@ -1,0 +1,22 @@
+{
+  "40012": [
+    {
+      "id": 1,
+      "user": {
+        "login": "maintainer1"
+      },
+      "body": "Can you check whether `Confirm email` is enabled in Auth settings and share the auth logs?",
+      "created_at": "2026-10-13T11:00:00Z"
+    }
+  ],
+  "40009": [
+    {
+      "id": 2,
+      "user": {
+        "login": "user7"
+      },
+      "body": "Same here on realtime-js 2.10.",
+      "created_at": "2026-10-10T11:00:00Z"
+    }
+  ]
+}

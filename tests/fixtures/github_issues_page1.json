@@ -1,0 +1,113 @@
+[
+  {
+    "url": "https://api.github.com/repos/supabase/supabase/issues/40012",
+    "html_url": "https://github.com/supabase/supabase/issues/40012",
+    "number": 40012,
+    "title": "signInWithPassword returns 'Invalid login credentials' after email confirmation",
+    "body": "**Bug report**\n\nAfter a user confirms their email, `supabase.auth.signInWithPassword` keeps returning `Invalid login credentials`.\n\n**To Reproduce**\n1. Sign up with email and password\n2. Click confirmation link\n3. Try to sign in\n\nsupabase-js 2.45.1",
+    "user": {
+      "login": "user40012",
+      "id": 40012
+    },
+    "labels": [
+      {
+        "id": 0,
+        "name": "bug",
+        "color": "ededed"
+      },
+      {
+        "id": 1,
+        "name": "auth",
+        "color": "ededed"
+      }
+    ],
+    "state": "open",
+    "state_reason": null,
+    "locked": false,
+    "comments": 2,
+    "created_at": "2026-10-01T10:00:00Z",
+    "updated_at": "2026-10-01T12:00:00Z",
+    "closed_at": null,
+    "author_association": "NONE"
+  },
+  {
+    "url": "https://api.github.com/repos/supabase/supabase/issues/40011",
+    "html_url": "https://github.com/supabase/supabase/issues/40011",
+    "number": 40011,
+    "title": "fix(docs): typo in storage guide",
+    "body": "Fixes a typo.",
+    "user": {
+      "login": "user40011",
+      "id": 40011
+    },
+    "labels": [
+      {
+        "id": 0,
+        "name": "documentation",
+        "color": "ededed"
+      }
+    ],
+    "state": "open",
+    "state_reason": null,
+    "locked": false,
+    "comments": 0,
+    "created_at": "2026-10-28T10:00:00Z",
+    "updated_at": "2026-10-28T12:00:00Z",
+    "closed_at": null,
+    "author_association": "NONE",
+    "pull_request": {
+      "url": "https://api.github.com/repos/supabase/supabase/pulls/40011"
+    }
+  },
+  {
+    "url": "https://api.github.com/repos/supabase/supabase/issues/40010",
+    "html_url": "https://github.com/supabase/supabase/issues/40010",
+    "number": 40010,
+    "title": "Feature request: allow custom bucket size limits per folder",
+    "body": "It would be great if Storage allowed size limits on a folder inside a bucket, not only on the bucket.",
+    "user": {
+      "login": "user40010",
+      "id": 40010
+    },
+    "labels": [
+      {
+        "id": 0,
+        "name": "enhancement",
+        "color": "ededed"
+      },
+      {
+        "id": 1,
+        "name": "storage",
+        "color": "ededed"
+      }
+    ],
+    "state": "open",
+    "state_reason": null,
+    "locked": false,
+    "comments": 0,
+    "created_at": "2026-10-27T10:00:00Z",
+    "updated_at": "2026-10-27T12:00:00Z",
+    "closed_at": null,
+    "author_association": "NONE"
+  },
+  {
+    "url": "https://api.github.com/repos/supabase/supabase/issues/40009",
+    "html_url": "https://github.com/supabase/supabase/issues/40009",
+    "number": 40009,
+    "title": "Realtime presence not syncing after reconnect",
+    "body": "When the websocket reconnects, presence state is empty until someone else joins.",
+    "user": {
+      "login": "user40009",
+      "id": 40009
+    },
+    "labels": [],
+    "state": "closed",
+    "state_reason": "completed",
+    "locked": false,
+    "comments": 1,
+    "created_at": "2026-10-26T10:00:00Z",
+    "updated_at": "2026-10-26T12:00:00Z",
+    "closed_at": "2026-10-26T13:00:00Z",
+    "author_association": "NONE"
+  }
+]

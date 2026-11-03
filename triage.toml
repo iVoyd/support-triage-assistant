@@ -1,0 +1,40 @@
+# Configuration for the triage assistant. Change [project] and [docs] to target another repo.
+
+[project]
+repo = "supabase/supabase"
+
+[docs]
+# A git URL (cloned shallow + sparse) or a local path.
+source = "https://github.com/supabase/supabase.git"
+# Folder inside the source that holds the Markdown/MDX docs.
+subdir = "apps/docs/content/guides"
+# Public URL for that folder. A file "auth/passwords.mdx" becomes {url_base}/auth/passwords.
+url_base = "https://supabase.com/docs/guides"
+
+[triage]
+model = "claude-haiku-5-5"
+effort = "low"
+top_k = 5
+max_tokens = 4000
+
+# Area name = short description shown to the model. Order is kept.
+[triage.areas]
+auth = "Supabase Auth: sign-up, login, OAuth/SSO providers, sessions, JWTs, MFA"
+database = "Postgres, SQL, migrations, extensions, RLS policies, pgvector, connection pooling"
+storage = "Supabase Storage: buckets, uploads, image transformations, S3 compatibility"
+realtime = "Realtime: broadcast, presence, Postgres changes subscriptions"
+edge-functions = "Edge Functions: Deno runtime, deploy, invoke, secrets"
+cli = "Supabase CLI and local development (supabase start, db diff, link, migrations tooling)"
+studio = "Supabase Studio / dashboard UI, table editor, SQL editor"
+client-libraries = "supabase-js, supabase-py, supabase-dart, supabase-swift and other SDKs"
+self-hosting = "Self-hosted Supabase, Docker setup, configuration"
+platform = "Hosted platform: billing, projects, branching, backups, regions, limits"
+docs = "Documentation content or docs website problems"
+other = "Anything that fits none of the above"
+
+# USD per million tokens. Check https://www.anthropic.com/pricing before trusting cost numbers.
+[prices.claude-haiku-5-5]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_read = 0.01
