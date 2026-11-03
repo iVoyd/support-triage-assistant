@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .docs import Chunk
 
-PROMPT_VERSION = "v1"
 TOOL_NAME = "record_triage"
 TYPES = ["bug", "question", "feature", "docs", "other"]
 SEVERITIES = ["low", "medium", "high"]
@@ -12,7 +11,7 @@ MAX_BODY_CHARS = 12000
 MAX_COMMENT_CHARS = 3000
 MAX_DOC_CHARS = 1500
 
-SYSTEM_TEMPLATE = """\
+SYSTEM_V1 = """\
 You are a triage assistant for the GitHub issue tracker of the open-source project {repo}.
 For each issue you receive, read it carefully together with the documentation excerpts
 provided, then call the `{tool}` tool exactly once with your assessment. Do not reply with
@@ -61,16 +60,56 @@ confidence: 0.0 to 1.0, how confident you are in type and area together.
 """
 
 
+# v2 changes (see eval/CHANGELOG.md): stricter needs_engineer, no claimed actions in
+# drafts, and the model names which retrieved docs are relevant.
+SYSTEM_V2 = (
+    SYSTEM_V1.replace(
+        """needs_engineer: true when the issue likely needs a code change or investigation by a
+maintainer (a confirmed or plausible bug, a regression, a security report). false when it
+can be answered from the docs or by the community. Give a one-sentence reason either way.
+""",
+        """needs_engineer: true only when a maintainer must change the project's code, configuration
+or infrastructure, or investigate a likely defect, regression or security problem in the
+project itself. false for: usage questions; problems the docs or community can answer;
+feature requests (they need a product decision first); requests about one specific hosted
+project or account (stuck project, billing, access, privilege changes), which go to the
+support team; and wording fixes to the docs. Give a one-sentence reason either way.
+""",
+    )
+    .replace(
+        """reproduce). Do not promise fixes or timelines.
+""",
+        """reproduce). Do not promise fixes or timelines.
+The reply has not been reviewed or acted on by anyone yet, so describe only what is true
+now: never say that you or the team have forwarded, escalated, flagged, reproduced,
+confirmed or started working on anything, and do not commit the team to looking into it.
+""",
+    )
+    .replace(
+        """confidence: 0.0 to 1.0""",
+        """relevant_docs: the URLs of the documentation excerpts that actually help with this issue,
+copied exactly. Often none are relevant; then give an empty list. draft_reply may cite only
+URLs listed here.
+
+confidence: 0.0 to 1.0""",
+    )
+)
+PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2}
+DEFAULT_VERSION = "v2"
+
+
 def format_areas(areas: dict[str, str]) -> str:
     return "\n".join(f"- {name}: {desc}" for name, desc in areas.items())
 
 
-def build_system_prompt(repo: str, areas: dict[str, str]) -> str:
-    return SYSTEM_TEMPLATE.format(repo=repo, tool=TOOL_NAME, areas=format_areas(areas))
+def build_system_prompt(repo: str, areas: dict[str, str], version: str = DEFAULT_VERSION) -> str:
+    if version not in PROMPTS:
+        raise ValueError(f"unknown prompt version {version!r}; known: {', '.join(PROMPTS)}")
+    return PROMPTS[version].format(repo=repo, tool=TOOL_NAME, areas=format_areas(areas))
 
 
-def build_tool(areas: dict[str, str]) -> dict:
-    return {
+def build_tool(areas: dict[str, str], version: str = DEFAULT_VERSION) -> dict:
+    tool = {
         "name": TOOL_NAME,
         "description": "Record the triage assessment for one GitHub issue.",
         "strict": True,
@@ -99,6 +138,11 @@ def build_tool(areas: dict[str, str]) -> dict:
             "additionalProperties": False,
         },
     }
+    if version != "v1":
+        schema = tool["input_schema"]
+        schema["properties"]["relevant_docs"] = {"type": "array", "items": {"type": "string"}}
+        schema["required"].append("relevant_docs")
+    return tool
 
 
 def _cut(text: str, limit: int) -> str:
@@ -146,6 +190,7 @@ def build_request(
     areas: dict[str, str],
     issue: dict,
     chunks: list[Chunk],
+    version: str = DEFAULT_VERSION,
 ) -> dict:
     """Keyword arguments for client.messages.create.
 
@@ -156,12 +201,12 @@ def build_request(
         "model": model,
         "max_tokens": max_tokens,
         "output_config": {"effort": effort},
-        "tools": [build_tool(areas)],
+        "tools": [build_tool(areas, version)],
         "tool_choice": {"type": "auto"},
         "system": [
             {
                 "type": "text",
-                "text": build_system_prompt(repo, areas),
+                "text": build_system_prompt(repo, areas, version),
                 "cache_control": {"type": "ephemeral"},
             }
         ],

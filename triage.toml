@@ -16,6 +16,11 @@ model = "claude-haiku-5-5"
 effort = "low"
 top_k = 5
 max_tokens = 4000
+# Prompt templates live in triage/prompt.py; see eval/CHANGELOG.md for what changed.
+prompt_version = "v2"
+# Drop retrieved doc chunks scoring below this BM25 score. A first guess: tune it with the
+# threshold table in eval/SCORECARD.md.
+min_score = 20.0
 
 # Area name = short description shown to the model. Order is kept.
 [triage.areas]
@@ -31,6 +36,31 @@ self-hosting = "Self-hosted Supabase, Docker setup, configuration"
 platform = "Hosted platform: billing, projects, branching, backups, regions, limits"
 docs = "Documentation content or docs website problems"
 other = "Anything that fits none of the above"
+
+[duplicates]
+candidates = 5          # TF-IDF candidates per issue
+min_similarity = 0.2    # cosine below this: no model call, "no duplicate"
+
+# Seeding eval/labels.csv: GitHub label -> our value. Unmapped labels are ignored.
+[labels.types]
+bug = "bug"
+enhancement = "feature"
+feature-request = "feature"
+documentation = "docs"
+question = "question"
+
+[labels.areas]
+auth = "auth"
+storage = "storage"
+studio = "studio"
+realtime = "realtime"
+"edge functions" = "edge-functions"
+self-hosted = "self-hosting"
+postgres = "database"
+postgREST = "database"
+branching = "platform"
+cli = "cli"
+documentation = "docs"
 
 # USD per million tokens. Check https://www.anthropic.com/pricing before trusting cost numbers.
 [prices.claude-haiku-5-5]

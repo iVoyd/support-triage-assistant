@@ -61,6 +61,7 @@ def triage_issue(
     areas: list[str],
     allowed_urls: list[str],
     max_attempts: int = 2,
+    version: str = "v2",
 ) -> TriageResult:
     """Send `request` (from prompt.build_request). On a bad answer, say what was wrong once."""
     messages = list(request["messages"])
@@ -85,7 +86,7 @@ def triage_issue(
             )
             continue
         output = dict(call.input)
-        errors = validate_output(output, areas, allowed_urls)
+        errors = validate_output(output, areas, allowed_urls, version)
         if not errors:
             break
         messages.append(

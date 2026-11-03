@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS triage (
     draft_reply TEXT,
     confidence REAL,
     retrieved_urls TEXT,         -- JSON list
+    retrieved_scores TEXT,       -- JSON list of BM25 scores, same order (v2+)
+    relevant_docs TEXT,          -- JSON list of retrieved URLs the model judged relevant (v2+)
     valid INTEGER NOT NULL,      -- 1 if output passed validation
     errors TEXT,                 -- JSON list of validation errors
     raw_output TEXT,             -- JSON tool input as returned by the model
@@ -65,7 +67,28 @@ CREATE TABLE IF NOT EXISTS triage (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS triage_issue ON triage(repo, number);
+
+CREATE TABLE IF NOT EXISTS duplicates (
+    id INTEGER PRIMARY KEY,
+    repo TEXT NOT NULL,
+    number INTEGER NOT NULL,
+    candidate INTEGER NOT NULL,
+    similarity REAL NOT NULL,    -- TF-IDF cosine
+    is_duplicate INTEGER,        -- model verdict; NULL if the model was not asked
+    reason TEXT,
+    model TEXT,
+    run_id TEXT NOT NULL,        -- groups the rows of one check of one issue
+    cost_usd REAL,
+    latency_ms INTEGER,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS duplicates_issue ON duplicates(repo, number);
 """
+
+# Columns added after Milestone 1; ALTER old databases in place.
+MIGRATIONS = {
+    "triage": {"retrieved_scores": "TEXT", "relevant_docs": "TEXT"},
+}
 
 
 def connect(path: str | Path) -> sqlite3.Connection:
@@ -74,4 +97,10 @@ def connect(path: str | Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    for table, columns in MIGRATIONS.items():
+        have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for name, kind in columns.items():
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {kind}")
+    conn.commit()
     return conn

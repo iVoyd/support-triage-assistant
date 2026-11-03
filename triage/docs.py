@@ -176,7 +176,8 @@ class Retriever:
         corpus = [tokenize(f"{c.heading} {c.heading} {c.text}") for c in chunks]
         self.bm25 = BM25Okapi(corpus) if chunks else None
 
-    def search(self, query: str, k: int = 5) -> list[tuple[Chunk, float]]:
+    def search(self, query: str, k: int = 5, min_score: float = 0.0) -> list[tuple[Chunk, float]]:
+        """Top-k chunks by BM25, one per URL, dropping any that score below min_score."""
         terms = tokenize(query)
         if not self.bm25 or not terms:
             return []
@@ -184,7 +185,7 @@ class Retriever:
         ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
         results, seen_urls = [], set()
         for i in ranked:
-            if scores[i] <= 0 or len(results) == k:
+            if scores[i] <= 0 or scores[i] < min_score or len(results) == k:
                 break
             chunk = self.chunks[i]
             if chunk.url in seen_urls:  # long sections are split; one hit per URL

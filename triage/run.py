@@ -10,12 +10,22 @@ from datetime import UTC, datetime
 from .config import Config
 from .docs import Retriever, load_chunks
 from .llm import TriageResult, triage_issue
-from .prompt import PROMPT_VERSION, build_request, retrieval_query
+from .prompt import build_request, retrieval_query
 
 
 def pick_issues(
-    conn: sqlite3.Connection, repo: str, limit: int, numbers: list[int] | None = None
+    conn: sqlite3.Connection,
+    repo: str,
+    limit: int,
+    numbers: list[int] | None = None,
+    model: str | None = None,
+    version: str | None = None,
 ) -> list[dict]:
+    """Issues to triage: the given numbers, or the newest issues with no record yet.
+
+    With model/version, "no record" means none for that model and prompt version, so a new
+    prompt version re-triages issues that only have older records.
+    """
     if numbers:
         marks = ",".join("?" * len(numbers))
         rows = conn.execute(
@@ -26,9 +36,10 @@ def pick_issues(
         rows = conn.execute(
             """SELECT * FROM issues i
                WHERE repo = ? AND NOT EXISTS (
-                   SELECT 1 FROM triage t WHERE t.repo = i.repo AND t.number = i.number)
+                   SELECT 1 FROM triage t WHERE t.repo = i.repo AND t.number = i.number
+                   AND (? IS NULL OR t.model = ?) AND (? IS NULL OR t.prompt_version = ?))
                ORDER BY created_at DESC, number DESC LIMIT ?""",
-            (repo, limit),
+            (repo, model, model, version, version, limit),
         )
     return [dict(r) for r in rows]
 
@@ -39,20 +50,21 @@ def save_result(
     issue: dict,
     urls: list[str],
     result: TriageResult,
+    scores: list[float] | None = None,
 ) -> int:
     out = result.output or {}
     cur = conn.execute(
         """INSERT INTO triage (repo, number, model, prompt_version, type, area, severity,
                needs_engineer, needs_engineer_reason, summary, draft_reply, confidence,
-               retrieved_urls, valid, errors, raw_output, input_tokens, output_tokens,
-               cache_write_tokens, cache_read_tokens, cost_usd, latency_ms, api_calls,
-               created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               retrieved_urls, retrieved_scores, relevant_docs, valid, errors, raw_output,
+               input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, cost_usd,
+               latency_ms, api_calls, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             cfg.repo,
             issue["number"],
             cfg.model,
-            PROMPT_VERSION,
+            cfg.prompt_version,
             out.get("type"),
             out.get("area"),
             out.get("severity"),
@@ -62,6 +74,8 @@ def save_result(
             out.get("draft_reply"),
             out.get("confidence"),
             json.dumps(urls),
+            json.dumps([round(s, 2) for s in scores]) if scores is not None else None,
+            json.dumps(out["relevant_docs"]) if "relevant_docs" in out else None,
             int(result.valid),
             json.dumps(result.errors),
             json.dumps(result.output) if result.output is not None else None,
@@ -91,10 +105,11 @@ def run_triage(
     if not chunks:
         log("warning: no doc chunks indexed; run `triage docs` first. Drafts will cite nothing.")
     retriever = Retriever(chunks)
-    issues = pick_issues(conn, cfg.repo, limit, numbers)
+    issues = pick_issues(conn, cfg.repo, limit, numbers, cfg.model, cfg.prompt_version)
     totals = {"issues": 0, "valid": 0, "cost_usd": 0.0, "latency_ms": 0, "cache_read_tokens": 0}
     for issue in issues:
-        hits = [c for c, _ in retriever.search(retrieval_query(issue), cfg.top_k)]
+        ranked = retriever.search(retrieval_query(issue), cfg.top_k, cfg.min_score)
+        hits = [c for c, _ in ranked]
         urls = [c.url for c in hits]
         request = build_request(
             repo=cfg.repo,
@@ -104,9 +119,10 @@ def run_triage(
             areas=cfg.areas,
             issue=issue,
             chunks=hits,
+            version=cfg.prompt_version,
         )
-        result = triage_issue(client, request, list(cfg.areas), urls)
-        save_result(conn, cfg, issue, urls, result)
+        result = triage_issue(client, request, list(cfg.areas), urls, version=cfg.prompt_version)
+        save_result(conn, cfg, issue, urls, result, [s for _, s in ranked])
         cost = result.usage.cost(cfg.price_for(cfg.model)) or 0.0
         totals["issues"] += 1
         totals["valid"] += int(result.valid)
