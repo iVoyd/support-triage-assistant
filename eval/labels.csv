@@ -1,0 +1,65 @@
+number,title,type,area,needs_engineer,duplicate_of,doc_url,confirmed,seed,notes,changed,source
+52682,pnpm install fails on Node 22.13–22.23.3 even though the repo says it requires Node >= 22.13,bug,other,yes,,,yes,github labels: bug,,,
+52657,Pause/Restore stuck,bug,platform,yes,,,yes,github labels: bug,,duplicate_of,
+52636,cro jobs cannot dlte after upgrade,bug,database,yes,,,yes,github labels: bug,,none,
+52607,Studio Storage: hidden folder placeholders cause duplicate files during pagination,bug,studio,yes,,,yes,"github labels: bug, storage",,none,
+52604,Studio Storage: public folder downloads mishandle question marks in object paths,bug,studio,yes,,,yes,"github labels: bug, storage",,none,
+52593,Studio Storage: renaming folders containing dots selects only part of the name,bug,studio,yes,,,yes,"github labels: bug, storage",,none,
+52587,Supavisor custom PostgreSQL role authentication failing — 28P01,question,database,no,,,yes,github labels: bug,,none,
+52582,Supabase values page has outdated information that needs correction,docs,docs,no,,,yes,github labels: documentation,,none,
+52571,pg-meta: editing a function corrupts scalar config_params (SET ... TO) values,bug,studio,yes,,,yes,,,none,
+52565,Bug,bug,platform,yes,52541,,yes,github labels: bug,,duplicate_of,
+52554,"While configuring the organisation settings under General → Data Privacy, I encountered an issue with the Supabase Assis",bug,studio,yes,,,yes,github labels: bug,,none,
+52550,Escalation of SU-513972 — staging deployment blocked by cron.job lock privileges (PostgreSQL 17.6),bug,database,yes,52636,,yes,,,"type,area,needs_engineer,duplicate_of",
+52547,"Docs: auth.email.secure_password_change described as ""require current password"", but it maps to reauthentication; no con",docs,cli,yes,52546,,yes,github labels: bug; closed as duplicate,,none,
+52546,"Docs: auth.email.secure_password_change described as ""require current password"", but it maps to reauthentication; no con",docs,cli,yes,,,yes,github labels: bug,,type,
+52541,Hosted PostgREST 14.5 returns 401/PGRST303 after successful Supabase Auth sign-in,bug,platform,yes,,,yes,github labels: bug,,none,
+52538,"iOS: the first API request after a 2-3 minute pause fails with -1005 (HTTP/3 idle timeout 180 s on the edge, no NAT rebi",bug,platform,yes,,,yes,github labels: bug,,none,
+52537,Unexpected PostgreSQL Database Creation in Supabase Project (ALPHA SOLUTION),other,platform,no,52477,,,github labels: bug,,,suggested
+52520,UI/UX: Keep bottom action buttons visible when selecting storage policy operations,bug,studio,yes,,,,github labels: bug,,,suggested
+52484,passqword recovery failure,other,auth,no,,,,github labels: bug,,,suggested
+52479,"Dashboard: creating a partitioned queue fails with ""function pgmq.create_partitioned(unknown, integer, integer) does not",bug,studio,yes,,,,github labels: bug,,,suggested
+52477,equest to investigate an unexpected PostgreSQL database creation,other,platform,no,,,,github labels: bug,,,suggested
+52430,Bump self-hosted images to patch Node.js Brotli vulnerability (CVE-2026-111497),bug,self-hosting,yes,,,yes,"github labels: bug, self-hosted",,none,spot-checked
+52384,"SMTP configuration example sends port as number, API expects string",docs,docs,no,,,,github labels: documentation,,,suggested
+52371,Database is still restarting after 1 day,other,platform,no,,,,github labels: bug,,,suggested
+52346,Self-hosted: gateway CORS on /functions/v1 allows every origin and overrides the function's own CORS (differs from hoste,bug,self-hosting,yes,,,yes,github labels: self-hosted,,none,spot-checked
+52304,"docs: clarify Management API migration transaction, history atomicity and request-size contract",docs,docs,yes,,,yes,github labels: documentation,,none,spot-checked
+52296,studio: PlanUpdateSidePanel fires useOrgSubscriptionQuery on mount when BILLING_READ is denied and omits disableProjectC,bug,studio,yes,,,,github labels: studio,,,suggested
+52277,e2e/docs: checkLinkFromBrowser falls back to full document DOM when articleSelector is missing on reference pages,bug,docs,yes,,,,github labels: documentation,,,suggested
+52272,[Studio] Pressing Backspace or typing in Command Menu context search pages (Edge Functions / RLS Policies / Storage / Ta,bug,studio,yes,,,,"github labels: bug, studio",,,suggested
+52267,Sigin using password options fail,bug,auth,yes,,,,github labels: bug,,,suggested
+52263,pg_net extension-owned table permissions blocking hosted deployment,question,database,no,,,yes,github labels: bug,,none,spot-checked
+52234,Can't sign into dashboard using github,other,studio,no,,,yes,github labels: bug,,none,spot-checked
+52225,backup storage objetcs,other,platform,no,,,,github labels: bug,,,suggested
+52222,Urgent: Supabase Project Restricted – Storage Quota Exceeded,other,platform,no,52219,,yes,github labels: bug,,none,spot-checked
+52219,""" bucket to delete old gallery images.",other,platform,no,,,yes,github labels: bug,,none,spot-checked
+52202,Urgent: Supabase Dashboard stuck loading – profile 404/409 errors,other,platform,no,,,,github labels: bug,,,suggested
+52200,Dev Problem,other,platform,no,,,,github labels: bug,,,suggested
+52155,description,other,docs,no,,,yes,github labels: documentation,,none,spot-checked
+52133,"Studio build fails immediately on Windows: ""$SKIP_ASSET_UPLOAD"" was unexpected at this time.",bug,studio,yes,,,,github labels: studio,,,suggested
+52048,"GitHub integration: overlapping production deploy runs race, so an older commit's Edge Functions can overwrite a newer c",bug,platform,yes,,,,github labels: edge functions,,,suggested
+52022,Secret API keys return 401 Invalid API key,bug,platform,no,,,,github labels: bug,,,suggested
+52011,API gateway (sb_gateway_version 2) holds browser requests ~5 s while upstream answers in 3–5 ms,bug,platform,yes,,,,github labels: bug,,,suggested
+51989,invalid credentials issue,other,platform,no,,,,github labels: bug,,,suggested
+51988,invalid credentials issue,other,platform,no,,,,github labels: bug,,,suggested
+51916,pg-meta: function configuration values containing equals signs are truncated,bug,database,yes,,,,github labels: postgres,,,suggested
+51893,Edge Functions: HTTP/2 connection closed with no response on function-generated 4xx (HTTP/1.1 works),bug,edge-functions,yes,,,yes,"github labels: bug, edge functions",,none,spot-checked
+50950,fix: unable to find an information about Log Ingestion in the documentation,docs,docs,no,50943,,,github labels: documentation; closed as duplicate,,,suggested
+50943,Log Ingestion More information,docs,docs,no,,,,github labels: documentation,,,suggested
+49979,fix(studio): escape SQL identifiers in row export,bug,studio,yes,49977,,yes,closed as duplicate,,none,spot-checked
+49978,fix(studio): escape SQL identifiers in row export,bug,studio,yes,49977,,,closed as duplicate,,,suggested
+47438,"Bug: Repeated FATAL: database ""supabase_admin"" does not exist errors across projects (Free & Pro plans)",bug,platform,yes,,,,github labels: bug,,,suggested
+47437,"Bug: Repeated FATAL: database ""supabase_admin"" does not exist errors across projects (Free & Pro plans)",bug,platform,yes,47438,,,github labels: bug; closed as duplicate,,,suggested
+45735,Request for Review of Unexpected Egress Spike and Grace Period Warning,other,platform,no,,,,github labels: bug; closed as duplicate,,,suggested
+45520,edge functions static_files seems to not work anymore,bug,cli,yes,,,yes,"github labels: bug, cli, edge functions; closed as duplicate",,none,spot-checked
+44130,Management API returns 500 on /v1/projects/{ref}/branches - 'Failed to retrieve preview branches',bug,platform,yes,44135,,yes,closed as duplicate,,none,spot-checked
+43663,"Supabase MCP OAuth fails with {""message"":""Unrecognized client_id""} in Cursor",bug,platform,yes,43662,,yes,github labels: bug; closed as duplicate,,area,spot-checked
+43319,Rate limit not working,bug,auth,yes,41947,,,github labels: bug; closed as duplicate,,,suggested
+43231,"Supabase websites open nahi ho rahi hain.
+DNS resolution issue aa raha hai.
+Please check DNS routing issue from Jio side",bug,platform,no,43142,,yes,github labels: bug; closed as duplicate,,none,spot-checked
+43230,"DNS ISSUE,",bug,platform,no,43142,,,github labels: bug; closed as duplicate,,,suggested
+43227,Supabase causing Auth and other issues.,other,platform,no,43142,,,github labels: bug; closed as duplicate,,,suggested
+43202,jio is not supporting it due to which my supabase project is not connecting to supabase server/network and data is not l,bug,platform,no,43142,,yes,github labels: bug; closed as duplicate,,none,spot-checked
+43200,Not able to sign in,other,auth,no,,,,github labels: bug; closed as duplicate,,,suggested
