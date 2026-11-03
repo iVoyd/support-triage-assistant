@@ -278,9 +278,11 @@ def evaluate(
             WHERE repo = ? AND model = ? AND number IN ({marks})""",
         (cfg.repo, cfg.model, *numbers),
     ).fetchone()
+    from .review import review_stats
     from .suggest import label_provenance
 
     return {
+        "review": review_stats(conn, cfg.repo, cfg.model, cfg.prompt_version),
         "labels": label_provenance(labels_path, labels_path.with_name("suggestions.csv")),
         "date": datetime.now(UTC).strftime("%Y-%m-%d"),
         "repo": cfg.repo,
@@ -437,6 +439,36 @@ def write_scorecard(report: dict, path: Path) -> None:
             "| --- | --- | --- |",
         ]
         lines += [f"| {g} | {p} | {n} |" for g, p, n in confusions]
+    rv = report.get("review")
+    lines += ["", "## Human review (`triage review`)", ""]
+    if rv and rv["n"]:
+        lines += [
+            f"{rv['n']} drafts from this model and prompt reviewed by Theo (not only the labelled",
+            "issues). Edit distance is word-level, 0 = unchanged, 1 = fully rewritten.",
+            "",
+            "| Metric | Value |",
+            "| --- | --- |",
+            f"| Approved as is | {rv['approved']} ({pct(rv['approval_rate'])}) |",
+            f"| Approved after edits | {rv['edited']} |",
+            f"| Rejected | {rv['rejected']} |",
+            f"| Usable (approved, with or without edits) | {pct(rv['usable_rate'])} |",
+            "| Mean edit distance, edited drafts | "
+            + (
+                "–"
+                if rv["mean_edit_distance_edited"] is None
+                else f"{rv['mean_edit_distance_edited']:.2f}"
+            )
+            + " |",
+            "| Mean edit distance, all usable drafts | "
+            + (
+                "–"
+                if rv["mean_edit_distance_usable"] is None
+                else f"{rv['mean_edit_distance_usable']:.2f}"
+            )
+            + " |",
+        ]
+    else:
+        lines.append("No drafts reviewed yet for this model and prompt.")
     lines += [
         "",
         "## Retrieval threshold",

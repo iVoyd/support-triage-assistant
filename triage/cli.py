@@ -224,6 +224,33 @@ def cmd_eval(args, cfg, conn):
     return 0
 
 
+def cmd_review(args, cfg, conn):
+    from .review import export_reviews, review_loop, review_stats
+
+    if args.prompt:
+        cfg.prompt_version = args.prompt
+    if args.export:
+        n = export_reviews(conn, cfg.repo, Path(args.export))
+        print(f"wrote {n} decisions to {args.export}")
+        return 0
+    if not args.stats:
+        counts = review_loop(conn, cfg, args.limit, numbers=args.number)
+        print(
+            f"approved {counts['approve']}, edited {counts['edit']}, rejected "
+            f"{counts['reject']}, skipped {counts['skipped']}"
+        )
+    st = review_stats(conn, cfg.repo, cfg.model, cfg.prompt_version)
+    if st["n"]:
+        dist = st["mean_edit_distance_edited"]
+        print(
+            f"all reviews for {cfg.model} {cfg.prompt_version}: {st['n']} drafts, "
+            f"{st['approved']} approved as is ({st['approval_rate']:.0%}), {st['edited']} "
+            f"edited, {st['rejected']} rejected; mean edit distance of edited drafts "
+            + ("–" if dist is None else f"{dist:.2f}")
+        )
+    return 0
+
+
 def cmd_show(args, cfg, conn):
     from .duplicates import describe
 
@@ -354,6 +381,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--unconfirmed", action="store_true", help="also score rows Theo has not confirmed"
     )
     ev.set_defaults(func=cmd_eval)
+
+    rv = sub.add_parser("review", help="approve, edit or reject drafts (nothing is posted)")
+    rv.add_argument("--limit", type=int, default=20)
+    rv.add_argument("--number", type=int, action="append", help="review this issue (repeatable)")
+    rv.add_argument("--prompt", help="prompt version whose drafts to review")
+    rv.add_argument("--stats", action="store_true", help="only print the review numbers")
+    rv.add_argument("--export", metavar="CSV", help="write every decision to a CSV file")
+    rv.set_defaults(func=cmd_review)
 
     s = sub.add_parser("show", help="print stored triage records")
     s.add_argument("--limit", type=int, default=20)
