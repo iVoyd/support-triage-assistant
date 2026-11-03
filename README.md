@@ -2,14 +2,16 @@
 
 A read-only triage assistant for an open-source project's GitHub issues. For each new
 issue it picks a type, area and severity, decides whether an engineer is needed, writes a
-short summary, and drafts a reply that cites only the project's own docs. Nothing is
-posted to GitHub: a person reviews every draft.
+short summary, drafts a reply that cites only the project's own docs, and looks for
+duplicates among earlier issues. A hand-checked label set measures how good it is. Nothing
+is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestone 1 (data + triage) is done: tested with recorded fixtures and run on 20
-real Supabase issues (see "Results"). Milestones 2–3 (duplicates, eval scorecard, review
-step) are not started. See [SPEC.md](SPEC.md).
+Status: Milestone 1 (data + triage) is done and was run on 20 real Supabase issues.
+Milestone 2 (duplicates, labels, evaluation) is built and tested with recorded fixtures;
+the first real scorecard still needs labels confirmed by Theo and one eval run (see
+"Evaluate"). Milestone 3 (review step) is not started. See [SPEC.md](SPEC.md).
 
 ## How it works
 
@@ -17,12 +19,17 @@ step) are not started. See [SPEC.md](SPEC.md).
 flowchart LR
     GH[GitHub REST API<br/>GET only] -->|triage fetch| DB[(SQLite<br/>data/triage.db)]
     DOCS[Docs repo<br/>Markdown/MDX] -->|triage docs<br/>chunk by heading| DB
-    DB -->|triage run| R[BM25 top-k<br/>doc chunks]
+    DB -->|triage run| R[BM25 top-k doc chunks<br/>above min_score]
     R --> P[Prompt:<br/>cached instructions + tool schema<br/>+ issue + doc excerpts]
     P --> C[Claude<br/>record_triage tool]
     C --> V{Validate}
     V -->|errors, once| C
     V --> DB
+    DB -->|triage dups| T[TF-IDF top 5<br/>older issues]
+    T --> C2[Claude<br/>same problem?]
+    C2 --> DB
+    L[eval/labels.csv<br/>seeded, then confirmed<br/>with triage label] --> E
+    DB -->|triage eval| E[eval/SCORECARD.md]
     DB -->|triage show| U[Terminal]
 ```
 
@@ -37,20 +44,35 @@ flowchart LR
    `type` (bug | question | feature | docs | other), `area` (from the list in
    `triage.toml`), `severity` (low | medium | high), `needs_engineer` + reason, `summary`
    (≤ 3 sentences), `draft_reply`, `confidence` (0–1).
+   From prompt `v2` the model also lists `relevant_docs`: which of the retrieved docs
+   actually help. Chunks scoring below `min_score` are not sent at all.
 4. The output is checked in code: valid enums, confidence in range, summary at most 3
-   sentences, and every URL in the draft must be one of the retrieved doc URLs. If a check
-   fails, the errors go back to the model once as a tool error. The result is stored either
-   way, with `valid = 0` and the errors if it still fails.
+   sentences, every URL in the draft listed in `relevant_docs` (and retrieved), and no
+   claimed actions such as "I've passed this to the team". If a check fails, the errors go
+   back to the model once as a tool error. The result is stored either way, with
+   `valid = 0` and the errors if it still fails.
 5. Each record stores input, output, cache-write and cache-read tokens, cost in USD, latency,
-   and the number of API calls.
+   the number of API calls, and the BM25 score of each retrieved doc.
+6. `triage dups` compares each issue with older stored issues by TF-IDF cosine (title
+   counted twice). Candidates above `duplicates.min_similarity` go to Claude in one call,
+   which answers "same underlying problem?" with a reason for each. Issues with nothing
+   similar cost no API call.
+7. `triage label --seed` writes `eval/labels.csv` with ~60 issues: recent issues closed as
+   duplicates (with their targets), the issues already triaged, then issues whose GitHub
+   labels map to our values. `triage label` walks the unconfirmed rows for a quick check.
+8. `triage eval` triages and duplicate-checks any labelled issue that has no record for the
+   current model and prompt version, then writes `eval/SCORECARD.md`.
 
 Design choices:
 
 - **Cheapest capable model by default**: `claude-haiku-5-5`, effort `low`.
 - **Prompt caching**: the instructions and tool schema are identical for every issue and
   sit before a cache breakpoint; the issue and doc excerpts come after it.
-- **GitHub labels are not sent to the model.** They will be the ground truth for the
-  Milestone 2 evaluation, so showing them would inflate the score.
+- **GitHub labels are not sent to the model.** They seed the evaluation labels, so showing
+  them would inflate the score. `needs_engineer` is never seeded from them.
+- **Prompt versions are kept side by side** (`triage/prompt.py`), so a change can be
+  measured against the old prompt on the same labels. Changes are logged in
+  [eval/CHANGELOG.md](eval/CHANGELOG.md).
 - **Issue text is treated as data.** The prompt says so, and long bodies are cut at 12,000
   characters with a visible marker.
 
@@ -95,8 +117,36 @@ triage run --limit 20
 triage show --limit 20 --drafts
 ```
 
-Useful options: `triage run --number 12345` re-triages one issue; `--model` overrides the
-model; `--repo owner/name` overrides the target; `--db` picks another database file.
+```bash
+triage dups --limit 20
+```
+
+Useful options: `triage run --number 12345` re-triages one issue; `--prompt v1` runs an
+older prompt; `--model` overrides the model; `--repo owner/name` overrides the target;
+`--db` picks another database file.
+
+### Evaluate
+
+```bash
+triage label --seed --n 60
+```
+
+```bash
+triage label
+```
+
+For each row: Enter accepts the values shown, or type fixes such as `t=b a=auth e=n`
+(type, area, needs engineer), `d=52546` (duplicate of), `u=<docs URL>` or `u=none` (the
+docs page that answers it, optional), then Enter. `s` skips, `q` quits; every answer is
+saved immediately, so you can stop and continue later.
+
+```bash
+triage eval
+```
+
+This triages and duplicate-checks the labelled issues that need it (about 60 issues at
+under a tenth of a cent each), then writes `eval/SCORECARD.md`. To compare prompts on the
+same labels, run `triage eval --prompt v1 --out eval/SCORECARD-v1.md` as well.
 
 ### Another project
 
@@ -113,11 +163,18 @@ ruff check . && ruff format --check . && pytest -q
 Tests make no network calls. GitHub responses are served from `tests/fixtures/*.json` via
 `httpx.MockTransport`; Claude responses are recorded `Message` JSON replayed by a fake
 client; docs are small Markdown files in `tests/fixtures/docs`. They cover fetching
-(pagination, PR filtering, resume, rate limits), chunking and anchors, BM25 retrieval,
-prompt assembly and caching layout, output validation, the retry loop, cost maths, and an
-end-to-end run that stores records.
+(pagination, PR filtering, resume, rate limits), chunking and anchors, BM25 retrieval and
+the score threshold, prompt assembly and caching layout, both prompt versions, output
+validation, the retry loop, cost maths, duplicate detection (with the real
+52546/52547 pair: titles real, bodies paraphrased), label seeding and the labelling loop,
+every scorecard metric, and end-to-end runs that store records.
 
 ## Results
+
+The evaluation scorecard will be in [eval/SCORECARD.md](eval/SCORECARD.md) after the first
+labelled run.
+
+### First run (Milestone 1, prompt v1)
 
 First real run: the 20 newest `supabase/supabase` issues, `claude-haiku-5-5` at effort
 `low`, prompt `v1`, run on Theo's machine on 2026-11-03.
@@ -183,15 +240,24 @@ What reading the output showed (not yet measured against labels):
 - Summaries sometimes repeat project references and request IDs from the issue. These are
   already public in the issue, but a reviewer should notice them.
 
-Milestone 2 turns these into numbers: a labelled set and a scorecard with type/area
-accuracy, needs-engineer agreement, retrieval hit rate and duplicate precision.
+Milestone 2 responds to each point: prompt `v2` (stricter `needs_engineer`, no claimed
+actions, `relevant_docs`), a retrieval `min_score` with a sweep table to tune it, and
+duplicate detection. The scorecard measures each one against labels.
 
 ## Limitations
 
-- Retrieval is keyword-based (BM25) with no relevance cut-off yet, so weak matches still
-  reach the prompt and can be cited.
-- `needs_engineer` currently leans towards true (19/20 in the first run).
-- Drafts can claim actions the tool never takes ("I've passed this to the team").
+- Retrieval is keyword-based (BM25). Raw BM25 scores do not separate good matches from
+  junk well (a test on the first run's issues found overlap), so `min_score = 20` is a first
+  guess until the scorecard's sweep table gives real numbers. For dashboard and platform
+  issues the guides often have nothing relevant.
+- `needs_engineer` leaned towards true with prompt v1 (19/20). v2 narrows the definition;
+  where the line sits (feature requests, single-project support requests) is a judgement
+  call that the labels settle.
+- The claimed-action check is a list of phrases, so new wordings can slip through.
+- Duplicate detection only compares against issues already in the database (the newest
+  300 plus the seeded duplicate examples), and TF-IDF misses duplicates described in
+  different words.
+- Labels are one person's judgement, and small classes give noisy per-class numbers.
 - Doc anchors are generated from headings in GitHub style. Most match the live site, but
   some generated anchors may not.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.
