@@ -8,9 +8,34 @@ is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestones 1 and 2 are done. The assistant has been run on real Supabase issues
-and scored against 62 labelled issues (see "Results"). Milestone 3 (review step) is not
-started. See [SPEC.md](SPEC.md).
+Status: Milestones 1 and 2 are done: the assistant has been run on real Supabase issues and
+scored against 62 labelled issues (see "Results"). Milestone 3 (review step, prompt v3) is
+built and tested with recorded fixtures. Its first real review session and the v3 eval are
+still to be run. See [SPEC.md](SPEC.md).
+
+![triage run on 20 real issues](docs/screenshots/run.svg)
+
+## Quickstart
+
+```bash
+git clone https://github.com/iVoyd/support-triage-assistant.git && cd support-triage-assistant
+```
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"
+```
+
+```bash
+export ANTHROPIC_API_KEY=... GITHUB_TOKEN="$(gh auth token)"
+```
+
+```bash
+triage fetch --limit 300 && triage docs && triage run --limit 20 && triage review
+```
+
+That fetches 300 issues, indexes the docs and triages the 20 newest issues (about two cents
+in total). You can then approve, edit or reject each draft. Nothing is ever posted to GitHub.
+The sections below cover each step, evaluation and costs.
 
 ## How it works
 
@@ -29,6 +54,8 @@ flowchart LR
     C2 --> DB
     L[eval/labels.csv<br/>seeded, then confirmed<br/>with triage label] --> E
     DB -->|triage eval| E[eval/SCORECARD.md]
+    DB -->|triage review| RV[Theo: approve / edit / reject]
+    RV --> DB
     DB -->|triage show| U[Terminal]
 ```
 
@@ -65,6 +92,14 @@ flowchart LR
    corrects, and each confirmed row records which suggested fields were changed.
 8. `triage eval` triages and duplicate-checks any labelled issue that has no record for the
    current model and prompt version, then writes `eval/SCORECARD.md`.
+9. `triage review` shows each new draft for a decision, with:
+   - the issue and the triage answer
+   - the retrieved docs, marking those the model judged relevant
+   - any duplicate the checker confirmed
+
+   `a` approves, `e` edits (in `$EDITOR`), `r` rejects with a reason. Decisions are stored
+   with the original and final draft and a word-level edit distance. The scorecard reports
+   the approval rate and the mean edit distance.
 
 Design choices:
 
@@ -127,6 +162,27 @@ triage dups --limit 20
 Useful options: `triage run --number 12345` re-triages one issue; `--prompt v1` runs an
 older prompt; `--model` overrides the model; `--repo owner/name` overrides the target;
 `--db` picks another database file.
+
+### Review drafts
+
+```bash
+triage review --limit 20
+```
+
+Each draft is shown with the issue, the triage answer, the retrieved docs (`*` marks those
+the model judged relevant) and any confirmed duplicate. Keys:
+
+- `a`: approve as is
+- `e`: edit in `$EDITOR`. Without `$EDITOR` set, type the new draft and end with a line
+  holding only `.`.
+- `r`: reject, with a reason
+- `s`: skip
+- `q`: quit
+
+Every decision is saved at once. `triage review --stats` prints the approval rate and edit
+distance. `triage review --export eval/reviews.csv` writes all decisions to a file you can
+commit. Only valid drafts from the current model and prompt version are offered, newest
+first.
 
 ### Evaluate
 
@@ -283,6 +339,10 @@ Next: decide whether account-specific support requests are `other` (change the t
 prompt) or `question`/`bug` (relabel), then re-run `triage eval`; and improve retrieval or
 send fewer excerpts.
 
+![triage label: a spot-checked row with the suggester's reasons](docs/screenshots/label.svg)
+
+![triage eval: triage and duplicate checks on the labelled set](docs/screenshots/eval.svg)
+
 ### First run (Milestone 1, prompt v1)
 
 First real run: the 20 newest `supabase/supabase` issues, `claude-haiku-5-5` at effort
@@ -353,6 +413,22 @@ Milestone 2 responds to each point: prompt `v2` (stricter `needs_engineer`, no c
 actions, `relevant_docs`), a retrieval `min_score` with a sweep table to tune it, and
 duplicate detection. The scorecard measures each one against labels.
 
+## Costs
+
+Measured on real runs (2026-11-03), at the prices in `triage.toml`:
+
+| Step | Model | Cost |
+| --- | --- | --- |
+| `triage fetch`, `triage docs` | none (GitHub API, git) | $0 |
+| `triage run`, per issue | `claude-haiku-5-5`, effort `low` | $0.00077 (v1), $0.00083 (v2) |
+| Triage of the 62 labelled issues | `claude-haiku-5-5` | about $0.05 per prompt version |
+| `triage dups` on 62 issues | `claude-haiku-5-5` | $0.016 (issues with no close candidate cost nothing) |
+| `triage label --suggest`, 61 rows | `claude-sonnet-5-5`, effort `medium` | $0.67 |
+| `triage review` | none (local) | $0 |
+
+The fixed instructions are cached: from the second issue on, each call reads about 1,600 to
+1,900 cached tokens instead of paying for them in full.
+
 ## Limitations
 
 - Retrieval is keyword-based (BM25) and weak here: the model judged only 22 of 301 excerpts
@@ -374,8 +450,17 @@ duplicate detection. The scorecard measures each one against labels.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.
 - Prices in `triage.toml` are typed in by hand; check them against Anthropic's pricing page.
 - Drafts are never sent anywhere. The tool only reads from GitHub.
+- The review step is a terminal loop. The optional local web page from the spec was not
+  built.
+- Edit distance is word-level. It shows how much text changed, not whether the change
+  mattered.
 
 ## How this was built
 
 Written with AI assistance (Claude Code) from the spec in `SPEC.md`, and reviewed by Theo
-O'Ferrall.
+O'Ferrall. The work was done in three milestone PRs, each tested with recorded fixtures (no
+network in tests). Theo ran the real runs on his own machine: fetching, triage, labelling
+and evaluation. He reviewed the labels himself and set the rules for `needs_engineer` and
+`type`. Each change of rule became a new prompt version, scored against v1 and v2 on the
+same labels ([eval/CHANGELOG.md](eval/CHANGELOG.md)). Screenshots in `docs/screenshots/`
+are rendered from real terminal output with `scripts/term_svg.py`.

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="890" height="330" viewBox="0 0 890 330" role="img" aria-label="triage eval (real run on Theo&#x27;s machine, 2026-11-03)">
+<rect width="890" height="330" rx="8" fill="#1e1e1e"/>
+<circle cx="18" cy="16" r="5" fill="#ff5f56"/><circle cx="36" cy="16" r="5" fill="#ffbd2e"/><circle cx="54" cy="16" r="5" fill="#27c93f"/>
+<text x="445.0" y="20" fill="#9a9a9a" font-family="monospace" font-size="12" text-anchor="middle">triage eval (real run on Theo&#x27;s machine, 2026-11-03)</text>
+<g font-family="DejaVu Sans Mono, Menlo, Consolas, monospace" font-size="13" fill="#d4d4d4" xml:space="preserve" style="white-space: pre">
+<text x="16" y="57" fill="#7ec699">$ triage eval</text>
+<text x="16" y="75">triaging 62 labelled issues with claude-haiku-5-5 v2</text>
+<text x="16" y="93">#52682 bug/other/medium eng=True $0.00106 8607ms cache_read=0 ok</text>
+<text x="16" y="111">#52657 bug/platform/high eng=False $0.00067 5433ms cache_read=1894 ok</text>
+<text x="16" y="129">#52636 bug/database/medium eng=False $0.00089 6028ms cache_read=1894 ok</text>
+<text x="16" y="147">...</text>
+<text x="16" y="165">#52267 bug/auth/medium eng=False $0.00123 7676ms cache_read=3788 INVALID: summary must be at most 3 sentences…</text>
+<text x="16" y="183">...</text>
+<text x="16" y="201">checking 62 labelled issues for duplicates</text>
+<text x="16" y="219">#52565 duplicate of #52541 (top: #52541 0.29, #50124 0.22, #50651 0.20) $0.00043</text>
+<text x="16" y="237">#52547 duplicate of #52546 (top: #52546 1.00, #50530 0.23, #49811 0.17) $0.00032</text>
+<text x="16" y="255">#52582 no candidate above 0.2 (top: #50943 0.14, #50500 0.12, #49427 0.12)</text>
+<text x="16" y="273">#52222 duplicate of #52219 (top: #52219 0.71, #51639 0.16, #52202 0.15) $0.00013</text>
+<text x="16" y="291">...</text>
+<text x="16" y="309">wrote eval/SCORECARD.md: 62 labelled issues, type accuracy 68%, area accuracy 79%</text>
+</g>
+</svg>

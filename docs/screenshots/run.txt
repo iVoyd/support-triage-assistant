@@ -1,0 +1,14 @@
+$ triage run --limit 20
+#52682 bug/other/low eng=True $0.00084 9116ms cache_read=0 ok
+#52657 bug/platform/high eng=True $0.00062 6352ms cache_read=1635 ok
+#52636 bug/database/high eng=True $0.00129 7600ms cache_read=3270 ok
+#52607 bug/studio/medium eng=True $0.00075 5055ms cache_read=1635 ok
+#52604 bug/studio/medium eng=True $0.00069 4270ms cache_read=1635 ok
+#52593 bug/studio/low eng=True $0.00055 4185ms cache_read=1635 ok
+#52587 bug/database/medium eng=True $0.00092 6726ms cache_read=1635 ok
+#52582 docs/docs/low eng=False $0.00042 3534ms cache_read=1635 ok
+#52571 bug/studio/medium eng=True $0.00065 3124ms cache_read=1635 ok
+#52565 bug/database/high eng=True $0.00088 6817ms cache_read=1635 ok
+...
+#52479 bug/studio/medium eng=True $0.00194 8832ms cache_read=3270 ok
+done: 20 issues, 20 valid, total $0.0168, avg $0.00084/issue, avg 5711 ms/issue
