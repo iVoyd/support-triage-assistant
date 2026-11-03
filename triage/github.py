@@ -171,3 +171,25 @@ def fetch_issues(
         conn.commit()
         comments += 1
     return {"issues": stored, "comments": comments, "requests": gh.requests}
+
+
+def search_closed_duplicates(gh: GitHubClient, repo: str, limit: int) -> list[dict]:
+    """Issues closed with the 'duplicate' reason, newest first (one search request)."""
+    data = gh.get(
+        "/search/issues",
+        params={
+            "q": f"repo:{repo} is:issue reason:duplicate",
+            "sort": "created",
+            "order": "desc",
+            "per_page": min(limit, 100),
+        },
+    )
+    return data.get("items", [])[:limit]
+
+
+def get_issue(gh: GitHubClient, repo: str, number: int) -> dict:
+    return gh.get(f"/repos/{repo}/issues/{number}")
+
+
+def get_comments(gh: GitHubClient, repo: str, number: int) -> list[dict]:
+    return gh.get(f"/repos/{repo}/issues/{number}/comments", params={"per_page": 100})

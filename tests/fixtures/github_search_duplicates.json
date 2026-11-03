@@ -1,0 +1,29 @@
+{
+  "total_count": 1,
+  "incomplete_results": false,
+  "items": [
+    {
+      "number": 52547,
+      "title": "Docs: auth.email.secure_password_change described as \"require current password\", but it maps to reauthentication; no config.toml key for the real setting",
+      "body": "The CLI config reference describes auth.email.secure_password_change as requiring the current password when changing it. In the CLI code the key maps to the reauthentication setting instead. There is no config.toml key for the require-current-password setting (GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD). Please fix the docs and add a key. Filed from the CLI docs page.",
+      "state": "closed",
+      "state_reason": "duplicate",
+      "labels": [
+        {
+          "name": "documentation"
+        },
+        {
+          "name": "auth"
+        }
+      ],
+      "user": {
+        "login": "someone"
+      },
+      "html_url": "https://github.com/supabase/supabase/issues/52547",
+      "comments": 1,
+      "created_at": "2026-10-07T10:00:00Z",
+      "updated_at": "2026-10-07T10:00:00Z",
+      "closed_at": null
+    }
+  ]
+}

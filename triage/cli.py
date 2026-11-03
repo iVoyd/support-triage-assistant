@@ -104,6 +104,50 @@ def cmd_dups(args, cfg, conn):
     return 0
 
 
+def cmd_label(args, cfg, conn):
+    from .labels import fetch_duplicate_examples, label_loop, seed_labels
+
+    path = Path(args.file)
+    if args.seed:
+        duplicates = {}
+        if args.dups:
+            from .github import GitHubClient, RateLimited
+
+            try:
+                gh = GitHubClient(token=os.environ.get("GITHUB_TOKEN"))
+                duplicates = fetch_duplicate_examples(gh, conn, cfg, args.dups)
+            except RateLimited as e:
+                print(f"stopped fetching duplicate examples: {e}")
+        kept, added = seed_labels(conn, cfg, path, args.n, duplicates)
+        print(f"{path}: kept {kept} existing rows, added {added} seeded rows")
+        return 0
+    if not path.exists():
+        print(f"{path} does not exist yet; run `triage label --seed` first.")
+        return 1
+    result = label_loop(conn, cfg, path)
+    print(f"confirmed {result['confirmed']} rows; {result['remaining']} left unconfirmed")
+    return 0
+
+
+def cmd_eval(args, cfg, conn):
+    from .evaluate import evaluate, write_scorecard
+
+    if args.model:
+        cfg.model = args.model
+    if args.prompt:
+        cfg.prompt_version = args.prompt
+    client = None if args.no_run else _client()
+    if client is None and not args.no_run:
+        return 1
+    report = evaluate(conn, cfg, Path(args.labels), client, unconfirmed=args.unconfirmed)
+    write_scorecard(report, Path(args.out))
+    print(
+        f"wrote {args.out}: {report['n']} labelled issues, type accuracy "
+        f"{report['type']['accuracy']:.0%}, area accuracy {report['area']['accuracy']:.0%}"
+    )
+    return 0
+
+
 def cmd_show(args, cfg, conn):
     rows = conn.execute(
         """SELECT t.*, i.title, i.html_url FROM triage t
@@ -172,6 +216,26 @@ def build_parser() -> argparse.ArgumentParser:
     du.add_argument("--number", type=int, action="append", help="check this issue (repeatable)")
     du.add_argument("--model", help="override the model from triage.toml")
     du.set_defaults(func=cmd_dups)
+
+    lb = sub.add_parser("label", help="seed eval/labels.csv, or confirm its rows one by one")
+    lb.add_argument("--file", default="eval/labels.csv")
+    lb.add_argument("--seed", action="store_true", help="add pre-filled rows, keep existing ones")
+    lb.add_argument("--n", type=int, default=60, help="target number of rows when seeding")
+    lb.add_argument(
+        "--dups", type=int, default=15, help="closed-as-duplicate issues to fetch (0 = none)"
+    )
+    lb.set_defaults(func=cmd_label)
+
+    ev = sub.add_parser("eval", help="score the labelled set and write eval/SCORECARD.md")
+    ev.add_argument("--labels", default="eval/labels.csv")
+    ev.add_argument("--out", default="eval/SCORECARD.md")
+    ev.add_argument("--model", help="override the model from triage.toml")
+    ev.add_argument("--prompt", help="prompt version to evaluate; overrides triage.toml")
+    ev.add_argument("--no-run", action="store_true", help="only score existing records")
+    ev.add_argument(
+        "--unconfirmed", action="store_true", help="also score rows Theo has not confirmed"
+    )
+    ev.set_defaults(func=cmd_eval)
 
     s = sub.add_parser("show", help="print stored triage records")
     s.add_argument("--limit", type=int, default=20)
