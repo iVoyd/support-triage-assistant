@@ -58,16 +58,15 @@ def cmd_docs(args, cfg, conn):
 
 
 def cmd_run(args, cfg, conn):
-    import anthropic
-
     from .run import run_triage
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("error: ANTHROPIC_API_KEY is not set.", file=sys.stderr)
-        return 1
     if args.model:
         cfg.model = args.model
-    client = anthropic.Anthropic()
+    if args.prompt:
+        cfg.prompt_version = args.prompt
+    client = _client()
+    if client is None:
+        return 1
     totals = run_triage(conn, cfg, client, args.limit, numbers=args.number)
     n = totals["issues"]
     if n:
@@ -77,6 +76,31 @@ def cmd_run(args, cfg, conn):
         )
     else:
         print("nothing to triage: every stored issue already has a record (or none fetched).")
+    return 0
+
+
+def _client():
+    import anthropic
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("error: ANTHROPIC_API_KEY is not set.", file=sys.stderr)
+        return None
+    return anthropic.Anthropic()
+
+
+def cmd_dups(args, cfg, conn):
+    from .duplicates import run_duplicates
+
+    if args.model:
+        cfg.model = args.model
+    client = _client()
+    if client is None:
+        return 1
+    totals = run_duplicates(conn, cfg, client, args.limit, numbers=args.number)
+    print(
+        f"done: {totals['issues']} issues checked, {totals['model_calls']} model calls, "
+        f"{totals['duplicates']} duplicates found, total ${totals['cost_usd']:.4f}"
+    )
     return 0
 
 
@@ -140,7 +164,14 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--limit", type=int, default=20)
     r.add_argument("--number", type=int, action="append", help="triage this issue (repeatable)")
     r.add_argument("--model", help="override the model from triage.toml")
+    r.add_argument("--prompt", help="prompt version, e.g. v1 or v2; overrides triage.toml")
     r.set_defaults(func=cmd_run)
+
+    du = sub.add_parser("dups", help="find duplicate candidates (TF-IDF) and confirm with Claude")
+    du.add_argument("--limit", type=int, default=20)
+    du.add_argument("--number", type=int, action="append", help="check this issue (repeatable)")
+    du.add_argument("--model", help="override the model from triage.toml")
+    du.set_defaults(func=cmd_dups)
 
     s = sub.add_parser("show", help="print stored triage records")
     s.add_argument("--limit", type=int, default=20)

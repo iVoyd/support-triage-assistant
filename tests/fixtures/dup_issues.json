@@ -1,0 +1,74 @@
+[
+  {
+    "number": 52484,
+    "title": "passqword recovery failure",
+    "body": "POST /recover returns 400 email_address_invalid when requesting a password reset for an existing Gmail account.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52484",
+    "created_at": "2026-10-01T10:00:00Z"
+  },
+  {
+    "number": 52541,
+    "title": "Hosted PostgREST 14.5 returns 401/PGRST303 after successful Supabase Auth sign-in",
+    "body": "After signInWithPassword succeeds, supabase.rpc('is_admin') returns 401 with PGRST303.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52541",
+    "created_at": "2026-10-07T10:00:00Z"
+  },
+  {
+    "number": 52546,
+    "title": "Docs: auth.email.secure_password_change described as \"require current password\", but it maps to reauthentication; no config.toml key for the real setting",
+    "body": "The CLI config reference describes auth.email.secure_password_change as requiring the current password when changing it. In the CLI code the key maps to the reauthentication setting instead. There is no config.toml key for the require-current-password setting (GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD). Please fix the docs and add a key.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52546",
+    "created_at": "2026-10-07T10:00:00Z"
+  },
+  {
+    "number": 52547,
+    "title": "Docs: auth.email.secure_password_change described as \"require current password\", but it maps to reauthentication; no config.toml key for the real setting",
+    "body": "The CLI config reference describes auth.email.secure_password_change as requiring the current password when changing it. In the CLI code the key maps to the reauthentication setting instead. There is no config.toml key for the require-current-password setting (GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_CURRENT_PASSWORD). Please fix the docs and add a key. Filed from the CLI docs page.",
+    "state": "closed",
+    "state_reason": "duplicate",
+    "html_url": "https://github.com/supabase/supabase/issues/52547",
+    "created_at": "2026-10-07T10:00:00Z"
+  },
+  {
+    "number": 52550,
+    "title": "Escalation of SU-513972 \u2014 staging deployment blocked by cron.job lock privileges (PostgreSQL 17.6)",
+    "body": "The postgres role lacks the lock privilege on cron.job (42501). Requesting GRANT MAINTAIN on cron.job.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52550",
+    "created_at": "2026-10-08T10:00:00Z"
+  },
+  {
+    "number": 52565,
+    "title": "Bug",
+    "body": "Supabase Auth returns 200 and issues tokens, but the Data API returns 401 PGRST303 'JWT issued at future' on every device.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52565",
+    "created_at": "2026-10-09T10:00:00Z"
+  },
+  {
+    "number": 52593,
+    "title": "Studio Storage: renaming folders containing dots selects only part of the name",
+    "body": "Renaming a folder named photos.backup selects only 'photos' on focus.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52593",
+    "created_at": "2026-10-12T10:00:00Z"
+  },
+  {
+    "number": 52636,
+    "title": "cro jobs cannot dlte after upgrade",
+    "body": "After upgrading to Pro, cron.unschedule() fails with permission denied for table job.",
+    "state": "open",
+    "state_reason": null,
+    "html_url": "https://github.com/supabase/supabase/issues/52636",
+    "created_at": "2026-10-16T10:00:00Z"
+  }
+]

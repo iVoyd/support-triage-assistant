@@ -1,0 +1,36 @@
+{
+  "id": "d1",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgI..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_d1",
+      "name": "record_duplicates",
+      "input": {
+        "candidates": [
+          {
+            "number": 52546,
+            "same_problem": true,
+            "reason": "Same title and the same report about secure_password_change mapping to reauthentication."
+          }
+        ]
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 1200,
+    "output_tokens": 180,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

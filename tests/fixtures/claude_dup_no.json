@@ -1,0 +1,36 @@
+{
+  "id": "d2",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgI..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_d2",
+      "name": "record_duplicates",
+      "input": {
+        "candidates": [
+          {
+            "number": 52541,
+            "same_problem": false,
+            "reason": "Both mention PGRST303, but this one is 'JWT issued at future' across devices, the other a 401 right after sign-in; the causes may differ."
+          }
+        ]
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 1200,
+    "output_tokens": 180,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}
