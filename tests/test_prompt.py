@@ -82,3 +82,17 @@ def test_cached_prefix_is_long_enough_to_cache():
     req = make_request()
     prefix = json.dumps(req["tools"]) + req["system"][0]["text"]
     assert len(prefix) / 4 > 600
+
+
+def test_prompt_versions():
+    import pytest
+
+    v1 = build_system_prompt("r", AREAS, "v1")
+    v2 = build_system_prompt("r", AREAS, "v2")
+    assert "relevant_docs" not in v1 and "relevant_docs:" in v2
+    assert "never say that you or the team have forwarded" in v2
+    assert "feature requests (they need a product decision first)" in v2
+    assert "relevant_docs" not in build_tool(AREAS, "v1")["input_schema"]["properties"]
+    assert "relevant_docs" in build_tool(AREAS, "v2")["input_schema"]["required"]
+    with pytest.raises(ValueError):
+        build_system_prompt("r", AREAS, "v9")

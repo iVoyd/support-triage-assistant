@@ -46,7 +46,14 @@ def test_no_tool_call_then_reminder():
     client = FakeAnthropic("claude_no_tool.json", "claude_valid.json")
     result = triage_issue(client, REQUEST, AREAS, ALLOWED)
     assert result.valid
-    assert "record_triage" in client.requests[1]["messages"][-1]["content"]
+    assert "calling record_triage" in client.requests[1]["messages"][-1]["content"]
+
+
+def test_claimed_action_is_sent_back_for_a_fix():
+    client = FakeAnthropic("claude_claims_action.json", "claude_valid.json")
+    result = triage_issue(client, REQUEST, AREAS, ALLOWED)
+    assert result.valid and result.usage.api_calls == 2
+    assert "claims an action" in client.requests[1]["messages"][-1]["content"][0]["content"]
 
 
 def test_refusal_stops():

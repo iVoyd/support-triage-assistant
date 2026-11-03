@@ -21,7 +21,10 @@
         "needs_engineer_reason": "Confirmed users should be able to sign in; this may be a regression in supabase-js 2.45.1.",
         "summary": "After confirming their email, the user cannot sign in with signInWithPassword and gets 'Invalid login credentials'. They expect sign-in to work once the email is confirmed.",
         "draft_reply": "Thanks for the report. 'Invalid login credentials' usually means the email/password pair does not match, while an unconfirmed email returns 'Email not confirmed' (see https://supabase.com/docs/guides/auth/passwords#signing-in-with-an-email-and-password). Could you share the auth logs for one failed attempt and confirm the project's email settings?",
-        "confidence": 0.78
+        "confidence": 0.78,
+        "relevant_docs": [
+          "https://supabase.com/docs/guides/auth/passwords#signing-in-with-an-email-and-password"
+        ]
       }
     }
   ],

@@ -21,7 +21,10 @@
         "needs_engineer_reason": "Confirmed users should be able to sign in; this may be a regression in supabase-js 2.45.1.",
         "summary": "One. Two. Three. Four.",
         "draft_reply": "See https://example.com/made-up-page for details.",
-        "confidence": 0.78
+        "confidence": 0.78,
+        "relevant_docs": [
+          "https://supabase.com/docs/guides/auth/passwords#signing-in-with-an-email-and-password"
+        ]
       }
     }
   ],

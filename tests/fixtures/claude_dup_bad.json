@@ -1,0 +1,36 @@
+{
+  "id": "d3",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgI..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_d3",
+      "name": "record_duplicates",
+      "input": {
+        "candidates": [
+          {
+            "number": 99999,
+            "same_problem": true,
+            "reason": "wrong number"
+          }
+        ]
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 1200,
+    "output_tokens": 180,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0
+  }
+}

@@ -45,6 +45,40 @@ def test_rejects_bad_enums_and_confidence():
     assert validate_output(dict(good(), needs_engineer="yes"), AREAS, ALLOWED)
 
 
+def test_v1_output_has_no_relevant_docs():
+    data = good()
+    del data["relevant_docs"]
+    assert validate_output(data, AREAS, ALLOWED, version="v1") == []
+    assert validate_output(data, AREAS, ALLOWED) == ["missing fields: relevant_docs"]
+
+
+def test_v2_draft_may_cite_only_docs_marked_relevant():
+    data = dict(good(), relevant_docs=[])
+    errors = validate_output(data, AREAS, ALLOWED)
+    assert any("listed in relevant_docs" in e for e in errors)
+    data = dict(good(), relevant_docs=["https://example.com/other"])
+    assert any(
+        "not given: https://example.com/other" in e for e in validate_output(data, AREAS, ALLOWED)
+    )
+
+
+def test_v2_rejects_claimed_actions():
+    for text in [
+        "I've passed this to the team.",
+        "We can reproduce the core problem.",
+        "I'm passing it to the maintainers.",
+        "We'll look into it.",
+    ]:
+        errors = validate_output(dict(good(), draft_reply=text), AREAS, ALLOWED)
+        assert any("claims an action" in e for e in errors), text
+    ok = "Could you share the logs? A maintainer will review this issue."
+    assert validate_output(dict(good(), draft_reply=ok), AREAS, ALLOWED) == []
+    # v1 did not have this rule
+    v1 = dict(good(), draft_reply="I've passed this on.")
+    del v1["relevant_docs"]
+    assert validate_output(v1, AREAS, ALLOWED, version="v1") == []
+
+
 def test_missing_fields():
     data = good()
     del data["summary"]

@@ -8,6 +8,15 @@ from .prompt import SEVERITIES, TYPES
 
 URL = re.compile(r"https?://[^\s)\]>\"'`]+")
 SENTENCE_END = re.compile(r"[.!?](?:\s+|$)")
+# Things a draft must not claim: nobody has acted on the issue when the draft is written.
+CLAIMED_ACTION = re.compile(
+    r"\b(?:I|we)(?:'ve| have)? (?:passed|forwarded|escalated|flagged|reproduced|confirmed|"
+    r"shared|raised|reported)\b"
+    r"|\b(?:I'm|I am|we're|we are) (?:passing|forwarding|escalating|flagging|looking into)\b"
+    r"|\bwe can reproduce\b"
+    r"|\bwe(?:'ll| will) (?:look into|investigate|fix|follow up)\b",
+    re.IGNORECASE,
+)
 FIELDS = [
     "type",
     "area",
@@ -33,10 +42,21 @@ def urls_in(text: str) -> list[str]:
     return [u.rstrip(".,;:") for u in URL.findall(text or "")]
 
 
-def validate_output(data: dict, areas: list[str], allowed_urls: list[str]) -> list[str]:
-    """Return a list of human-readable problems. Empty list means valid."""
+def _norm(url: str) -> str:
+    return url.strip().rstrip("/")
+
+
+def validate_output(
+    data: dict, areas: list[str], allowed_urls: list[str], version: str = "v2"
+) -> list[str]:
+    """Return a list of human-readable problems. Empty list means valid.
+
+    allowed_urls are the retrieved doc URLs. From v2 on, the model also lists which of them
+    are relevant, and the draft may cite only those.
+    """
     errors = []
-    missing = [f for f in FIELDS if f not in data]
+    fields = FIELDS if version == "v1" else [*FIELDS, "relevant_docs"]
+    missing = [f for f in fields if f not in data]
     if missing:
         return [f"missing fields: {', '.join(missing)}"]
     if data["type"] not in TYPES:
@@ -59,11 +79,32 @@ def validate_output(data: dict, areas: list[str], allowed_urls: list[str]) -> li
         errors.append(f"summary must be at most 3 sentences, got {count_sentences(summary)}")
     if not str(data["draft_reply"]).strip():
         errors.append("draft_reply must not be empty")
-    allowed = {u.rstrip("/") for u in allowed_urls}
-    bad = [u for u in urls_in(data["draft_reply"]) if u.rstrip("/") not in allowed]
+    if version != "v1":
+        claims = sorted({m.group(0) for m in CLAIMED_ACTION.finditer(data["draft_reply"])})
+        if claims:
+            errors.append(
+                "draft_reply claims an action nobody has taken (" + "; ".join(claims) + "); "
+                "describe only what is true now"
+            )
+    allowed = {_norm(u) for u in allowed_urls}
+    if version != "v1":
+        relevant = data["relevant_docs"]
+        if not isinstance(relevant, list) or not all(isinstance(u, str) for u in relevant):
+            errors.append("relevant_docs must be a list of URLs")
+            relevant = []
+        unknown = [u for u in relevant if _norm(u) not in allowed]
+        if unknown:
+            errors.append(
+                "relevant_docs may only list URLs of the documentation given with the issue; "
+                f"not given: {', '.join(unknown)}"
+            )
+        allowed = {_norm(u) for u in relevant} & allowed
+    bad = [u for u in urls_in(data["draft_reply"]) if _norm(u) not in allowed]
     if bad:
         errors.append(
-            "draft_reply may only cite documentation URLs given with the issue; "
+            "draft_reply may only cite documentation URLs given with the issue"
+            + ("" if version == "v1" else " and listed in relevant_docs")
+            + "; "
             f"not allowed: {', '.join(bad)}"
         )
     return errors
