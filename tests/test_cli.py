@@ -108,3 +108,48 @@ def test_accept_then_spot_check_via_cli(tmp_path, capsys, monkeypatch):
         "Labels: suggested by claude-sonnet-5-5; a random 5 of 18 hand-checked, 0 corrected "
         "(estimated label error rate 0%)." in capsys.readouterr().out
     )
+
+
+def test_reopen_walks_exactly_the_named_rows(tmp_path, capsys, monkeypatch):
+    labels = tmp_path / "labels.csv"
+    write_labels(
+        labels,
+        [
+            {
+                "number": "1",
+                "type": "other",
+                "area": "auth",
+                "needs_engineer": "no",
+                "confirmed": "yes",
+                "source": "spot-checked",
+            },
+            {
+                "number": "2",
+                "type": "other",
+                "area": "auth",
+                "needs_engineer": "no",
+                "source": "suggested",
+            },
+            {
+                "number": "3",
+                "type": "other",
+                "area": "auth",
+                "needs_engineer": "no",
+                "source": "suggested",
+            },
+        ],
+    )
+    answers = iter(["t=q", "t=b"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    db = str(tmp_path / "t.db")
+    assert cli.main(["--db", db, "label", "--file", str(labels), "--reopen", "1,2,9"]) == 0
+    out = capsys.readouterr().out
+    assert "not in" in out and "9" in out and "checked 2" in out
+    rows = {r["number"]: r for r in read_labels(labels)}
+    assert (rows["1"]["type"], rows["1"]["source"]) == ("question", "spot-checked")
+    assert (rows["2"]["type"], rows["2"]["confirmed"], rows["2"]["source"]) == (
+        "bug",
+        "yes",
+        "hand",
+    )
+    assert rows["3"]["confirmed"] == ""  # not named: untouched

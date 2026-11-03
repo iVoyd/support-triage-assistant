@@ -1,0 +1,13 @@
+$ triage label --spot-check 15
+spot-checking a random 15 (seed 1): #45520 #52304 #43231 #51893 #44130 #52263 #52222 ...
+
+#52222 Urgent: Supabase Project Restricted – Storage Quota Exceeded
+  https://github.com/supabase/supabase/issues/52222  [closed/completed]  labels: bug, external-issue, to-triage
+  Hi, thank you for your response. I have already emailed support@supabase.com regarding my project ...
+  -> type=other area=platform engineer=no duplicate_of=52219 doc_url=-  (seed: github labels: bug)
+  suggested by claude-sonnet-5-5 (check it):
+    type=other: This is a support request about one specific account's restricted project, not a product defect or a how-to question.
+    area=platform: The project is restricted for exceeding the storage quota, which is a hosted-platform limits and project-status matter.
+    engineer=False: Support staff handle account-specific restrictions through the support@supabase.com channel the reporter already emailed, so no code change is needed.
+    duplicate_of=52219: Issue 52219 is an earlier report for the same project (uvwarprsghwvrfmdaaqv) with the same restricted-storage problem and the same request, and it was also closed.
+  > 

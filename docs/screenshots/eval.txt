@@ -1,0 +1,15 @@
+$ triage eval
+triaging 62 labelled issues with claude-haiku-5-5 v2
+#52682 bug/other/medium eng=True $0.00106 8607ms cache_read=0 ok
+#52657 bug/platform/high eng=False $0.00067 5433ms cache_read=1894 ok
+#52636 bug/database/medium eng=False $0.00089 6028ms cache_read=1894 ok
+...
+#52267 bug/auth/medium eng=False $0.00123 7676ms cache_read=3788 INVALID: summary must be at most 3 sentences, got 4
+...
+checking 62 labelled issues for duplicates
+#52565 duplicate of #52541 (top: #52541 0.29, #50124 0.22, #50651 0.20) $0.00043
+#52547 duplicate of #52546 (top: #52546 1.00, #50530 0.23, #49811 0.17) $0.00032
+#52582 no candidate above 0.2 (top: #50943 0.14, #50500 0.12, #49427 0.12)
+#52222 duplicate of #52219 (top: #52219 0.71, #51639 0.16, #52202 0.15) $0.00013
+...
+wrote eval/SCORECARD.md: 62 labelled issues, type accuracy 68%, area accuracy 79%

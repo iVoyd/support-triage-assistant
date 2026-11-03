@@ -1,0 +1,14 @@
+#52682 pnpm install fails on Node 22.13–22.23.3 even though the repo says it requires Node >= 22.13
+  https://github.com/supabase/supabase/issues/52682
+  type=bug area=other severity=medium needs_engineer=yes confidence=0.7
+  engineer: The repo's declared engines.node minimum (>=22.13 at root, >=22.12.0 in apps/kb) is lower than the requirement of the locked astro@7.4.2 dependency (>=22.23.4), so a maintainer must correct the project's package.json files and the AGENTS.md note.
+  summary: The reporter's pnpm install fails on Node 22.22.3 because apps/kb depends on astro@7.4.2, which requires Node >=22.23.4, while the repo's engines.node and AGENTS.md say Node >=22.13 is supported. They expect either the declared minimum to match the real requirement or the install to succeed on all versions the repo claims to support.
+  docs retrieved (* = model judged relevant):
+      https://supabase.com/docs/guides/getting-started/quickstarts/redwoodjs#3-create-a-redwoodjs-app
+      https://supabase.com/docs/guides/integrations/vercel-marketplace#via-template
+      https://supabase.com/docs/guides/platform/network-restrictions#to-get-started-via-the-cli
+      https://supabase.com/docs/guides/database/extensions/pgrouting#example
+      https://supabase.com/docs/guides/local-development/cli/getting-started#installing-the-supabase-cli
+  draft reply:
+    | Thanks for the detailed report. You're right that the declared Node minimum in the root package.json, apps/kb/package.json and AGENTS.md doesn't match the requirement of astro@7.4.2 (>=22.23.4), which makes pnpm install fail with engineStrict enabled on 22.13–22.23.3. Upgrading to Node 22.23.4 or later should unblock local installs in the meantime. Could you confirm the output of `node -v` and `pnpm -v` on your machine so we can check whether anything else is involved?
+  [a/e/r/s/q] > e

@@ -10,7 +10,28 @@ from datetime import UTC, datetime
 from .config import Config
 from .docs import Retriever, load_chunks
 from .llm import TriageResult, triage_issue
-from .prompt import build_request, retrieval_query
+from .prompt import build_request, retrieval_query, uses_duplicates
+
+
+def likely_duplicate(conn: sqlite3.Connection, cfg: Config, number: int) -> dict | None:
+    """The duplicate check's confirmed verdict for this issue, if `triage dups` found one."""
+    from .duplicates import describe, top_duplicate
+
+    target = top_duplicate(conn, cfg.repo, number, cfg.model)
+    if target is None:
+        return None
+    reason = next(
+        (
+            d["reason"]
+            for d in describe(conn, cfg.repo, number, cfg.model)
+            if d["candidate"] == target
+        ),
+        "",
+    )
+    row = conn.execute(
+        "SELECT title FROM issues WHERE repo = ? AND number = ?", (cfg.repo, target)
+    ).fetchone()
+    return {"number": target, "title": row["title"] if row else "", "reason": reason}
 
 
 def pick_issues(
@@ -111,6 +132,11 @@ def run_triage(
         ranked = retriever.search(retrieval_query(issue), cfg.top_k, cfg.min_score)
         hits = [c for c, _ in ranked]
         urls = [c.url for c in hits]
+        dup = (
+            likely_duplicate(conn, cfg, issue["number"])
+            if uses_duplicates(cfg.prompt_version)
+            else None
+        )
         request = build_request(
             repo=cfg.repo,
             model=cfg.model,
@@ -120,8 +146,16 @@ def run_triage(
             issue=issue,
             chunks=hits,
             version=cfg.prompt_version,
+            duplicate=dup,
         )
-        result = triage_issue(client, request, list(cfg.areas), urls, version=cfg.prompt_version)
+        result = triage_issue(
+            client,
+            request,
+            list(cfg.areas),
+            urls,
+            version=cfg.prompt_version,
+            duplicate=dup["number"] if dup else None,
+        )
         save_result(conn, cfg, issue, urls, result, [s for _, s in ranked])
         cost = result.usage.cost(cfg.price_for(cfg.model)) or 0.0
         totals["issues"] += 1

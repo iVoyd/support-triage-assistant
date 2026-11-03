@@ -8,9 +8,33 @@ is posted to GitHub: a person reviews every draft.
 
 Default target: `supabase/supabase`. Other projects work by editing `triage.toml`.
 
-Status: Milestones 1 and 2 are done. The assistant has been run on real Supabase issues
-and scored against 62 labelled issues (see "Results"). Milestone 3 (review step) is not
-started. See [SPEC.md](SPEC.md).
+Status: all three milestones are done. The assistant has been run on real Supabase issues,
+scored against 62 labelled issues with prompts v1–v4, and its drafts have been reviewed
+twice (see "Results"). Prompt v4 is the default. See [SPEC.md](SPEC.md).
+
+![triage run on 20 real issues](docs/screenshots/run.svg)
+
+## Quickstart
+
+```bash
+git clone https://github.com/iVoyd/support-triage-assistant.git && cd support-triage-assistant
+```
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"
+```
+
+```bash
+export ANTHROPIC_API_KEY=... GITHUB_TOKEN="$(gh auth token)"
+```
+
+```bash
+triage fetch --limit 300 && triage docs && triage run --limit 20 && triage review
+```
+
+That fetches 300 issues, indexes the docs and triages the 20 newest issues (about two cents
+in total). You can then approve, edit or reject each draft. Nothing is ever posted to GitHub.
+The sections below cover each step, evaluation and costs.
 
 ## How it works
 
@@ -29,6 +53,8 @@ flowchart LR
     C2 --> DB
     L[eval/labels.csv<br/>seeded, then confirmed<br/>with triage label] --> E
     DB -->|triage eval| E[eval/SCORECARD.md]
+    DB -->|triage review| RV[Theo: approve / edit / reject]
+    RV --> DB
     DB -->|triage show| U[Terminal]
 ```
 
@@ -65,6 +91,14 @@ flowchart LR
    corrects, and each confirmed row records which suggested fields were changed.
 8. `triage eval` triages and duplicate-checks any labelled issue that has no record for the
    current model and prompt version, then writes `eval/SCORECARD.md`.
+9. `triage review` shows each new draft for a decision, with:
+   - the issue and the triage answer
+   - the retrieved docs, marking those the model judged relevant
+   - any duplicate the checker confirmed
+
+   `a` approves, `e` edits (in `$EDITOR`), `r` rejects with a reason. Decisions are stored
+   with the original and final draft and a word-level edit distance. The scorecard reports
+   the approval rate and the mean edit distance.
 
 Design choices:
 
@@ -127,6 +161,27 @@ triage dups --limit 20
 Useful options: `triage run --number 12345` re-triages one issue; `--prompt v1` runs an
 older prompt; `--model` overrides the model; `--repo owner/name` overrides the target;
 `--db` picks another database file.
+
+### Review drafts
+
+```bash
+triage review --limit 20
+```
+
+Each draft is shown with the issue, the triage answer, the retrieved docs (`*` marks those
+the model judged relevant) and any confirmed duplicate. Keys:
+
+- `a`: approve as is
+- `e`: edit in `$EDITOR`. Without `$EDITOR` set, type the new draft and end with a line
+  holding only `.`.
+- `r`: reject, with a reason
+- `s`: skip
+- `q`: quit
+
+Every decision is saved at once. `triage review --stats` prints the approval rate and edit
+distance. `triage review --export eval/reviews.csv` writes all decisions to a file you can
+commit. Only valid drafts from the current model and prompt version are offered, newest
+first.
 
 ### Evaluate
 
@@ -216,28 +271,92 @@ every scorecard metric, and end-to-end runs that store records.
 
 ## Results
 
-### Scorecard (Milestone 2)
+### Scorecard
 
-Full tables: [eval/SCORECARD.md](eval/SCORECARD.md) (prompt v2) and
-[eval/SCORECARD-v1.md](eval/SCORECARD-v1.md) (prompt v1), same 62 labels, same day
-(2026-11-03), `claude-haiku-5-5` at effort `low`.
+Full tables in `eval/`:
+- [SCORECARD.md](eval/SCORECARD.md): prompt v4, the default.
+- [SCORECARD-v3.md](eval/SCORECARD-v3.md): prompt v3.
+- [SCORECARD-v2-relabelled.md](eval/SCORECARD-v2-relabelled.md): the v2 records re-scored on
+  the current labels.
+- [SCORECARD-v2.md](eval/SCORECARD-v2.md) and [SCORECARD-v1.md](eval/SCORECARD-v1.md): prompts
+  v2 and v1, scored on the labels as they were then.
 
-Labels: suggested by claude-sonnet-5-5; a random 15 of 46 hand-checked, 1 corrected
-(estimated label error rate 7%, 95% interval 1–30%). The other 16 were labelled fully by
-hand; there, 4 of the 15 suggestions were changed. Those 16 were the newest issues, not a
-random sample, so they do not enter the error estimate. 31 of the 62 labels are accepted
-suggestions nobody checked.
+All runs: 62 labelled issues, 2026-11-03, `claude-haiku-5-5` at effort `low`.
 
-| Metric | v1 | v2 |
+Labels (current): suggested by claude-sonnet-5-5; a random 15 of 35 hand-checked, 2
+corrected (estimated label error rate 13%, 95% interval 4–38%). 27 were labelled fully by
+hand and 20 are accepted suggestions nobody checked.
+
+The 27 hand-labelled rows are:
+- 16 newest issues, labelled by hand
+- 11 rows re-checked under the v3 type rule
+
+Neither group is a random sample, so neither enters the error estimate. One of the two
+spot-check corrections, the area of 52234, was made after the spot-check, when Theo
+re-checked the row.
+
+Current labels (v2 re-scored, v3, v4):
+
+| Metric | v2 | v3 | v4 |
+| --- | --- | --- | --- |
+| Type accuracy | 68% | 82% | 84% |
+| Area accuracy | 81% | 81% | 81% |
+| Needs-engineer agreement | 90% | 90% | 90% |
+| Model says engineer / labels say engineer | 48% / 58% | 52% / 58% | 52% / 58% |
+| Duplicate precision@1 / recall | 71% / 80% | same | same |
+| Issues where the model found a relevant doc | 18 of 62 | 18 of 62 | 18 of 62 |
+| Valid outputs | 60 / 62 | 61 / 62 | 57 / 62 |
+| Avg cost / latency per issue | $0.00083 / 5.7 s | $0.00079 / 5.5 s | $0.00086 / 5.8 s |
+
+Re-scoring v2 on today's labels (no API calls) shows the v3 type gain comes from the prompt,
+not the relabelling. Duplicate precision and recall do not depend on the prompt.
+
+On the original labels, v1 had type 68%, area 84%, needs-engineer 81% and called for an
+engineer on 77% of issues (`eval/SCORECARD-v1.md`).
+
+### Human review
+
+![triage review: one draft](docs/screenshots/review.svg)
+
+Theo's first review (prompt v3, 20 drafts) and a re-review of the same 20 issues with v4.
+Two issues had no valid v4 draft, so they count as failures:
+
+| Same 20 issues | v3 | v4 |
 | --- | --- | --- |
-| Type accuracy | 68% | 68% |
-| Area accuracy | 84% | 79% |
-| Needs-engineer agreement | 81% | 90% |
-| Model says engineer / labels say engineer | 77% / 58% | 48% / 58% |
-| Duplicate precision@1 / recall | 71% / 80% | same (the duplicate check does not depend on the prompt) |
-| Issues where the model found a relevant doc | – | 18 of 62 (29%) |
-| Valid outputs | 61 / 62 | 60 / 62 (both failures: a 4-sentence summary after the retry) |
-| Avg cost / latency per issue | $0.00077 / 5.4 s | $0.00083 / 5.7 s |
+| Approved as is | 2 (10%) | 5 (25%) |
+| Approved after edits | 17 | 13 |
+| Rejected | 1 | 0 |
+| No valid draft | 0 | 2 |
+| Mean edit distance, edited drafts | 0.47 | 0.55 |
+| Mean edit distance, all usable drafts | 0.42 | 0.39 |
+
+Edit distance is word-level: 0 = unchanged, 1 = rewritten.
+
+In the v3 review, almost every draft was usable (19 of 20), but almost none could be sent
+as written. Theo's edits, by kind:
+
+1. **Asked for information already in the issue** (about 8 drafts). The screenshot shows
+   one: the draft asks for `node -v` when the issue already says Node 22.22.3.
+2. **Talked about its own inputs** ("no documentation I have", "the excerpts provided"),
+   5 drafts.
+3. **Ignored a duplicate the duplicate step had confirmed**, 4 drafts. 52565 was rejected
+   for this. The cause is the pipeline: triage ran before the duplicate check, so the draft
+   could not know.
+4. **Cited or promised a docs link without including it**, 3 drafts.
+5. **Claimed an action it cannot take** ("I've labelled this"), 1 draft.
+
+Prompt v4 targeted all five. In the re-review:
+- **Fixed:** every draft with a confirmed duplicate now names it, and there were no claimed
+  actions.
+- **Reduced:** talk about its own inputs fell from 5 drafts to 2.
+- **Still open:** asking for information already given (5 drafts). That is the v5 target.
+
+**The cost of v4's stricter checks:** 52582 and 52520 lost their draft. Their v3 drafts
+contained exactly what v4 rejects ("The provided documentation doesn't cover this page",
+"I've labelled this as a feature request"). The v4 draft was apparently sent back and
+failed again on the one retry, and invalid drafts are not offered for review. Overall,
+valid outputs fell from 61 to 57 of 62. The drafts that still needed edits needed bigger
+ones (0.55 vs 0.47).
 
 Labelling rules Theo followed:
 
@@ -259,7 +378,7 @@ Labelling rules Theo followed:
 
   Both are candidate misses, not wrong judgements on candidates the suggester saw.
 
-What the numbers say:
+What the first v1 → v2 comparison said (on the labels as they were then):
 
 - **v2 fixed the over-flagging.** v1 called for an engineer on 77% of issues against 58% in
   the labels; v2 says 48%, slightly under. Agreement went from 81% to 90%.
@@ -282,6 +401,10 @@ What the numbers say:
 Next: decide whether account-specific support requests are `other` (change the triage
 prompt) or `question`/`bug` (relabel), then re-run `triage eval`; and improve retrieval or
 send fewer excerpts.
+
+![triage label: a spot-checked row with the suggester's reasons](docs/screenshots/label.svg)
+
+![triage eval: triage and duplicate checks on the labelled set](docs/screenshots/eval.svg)
 
 ### First run (Milestone 1, prompt v1)
 
@@ -353,6 +476,22 @@ Milestone 2 responds to each point: prompt `v2` (stricter `needs_engineer`, no c
 actions, `relevant_docs`), a retrieval `min_score` with a sweep table to tune it, and
 duplicate detection. The scorecard measures each one against labels.
 
+## Costs
+
+Measured on real runs (2026-11-03), at the prices in `triage.toml`:
+
+| Step | Model | Cost |
+| --- | --- | --- |
+| `triage fetch`, `triage docs` | none (GitHub API, git) | $0 |
+| `triage run`, per issue | `claude-haiku-5-5`, effort `low` | $0.00077 (v1), $0.00083 (v2) |
+| Triage of the 62 labelled issues | `claude-haiku-5-5` | about $0.05 per prompt version |
+| `triage dups` on 62 issues | `claude-haiku-5-5` | $0.016 (issues with no close candidate cost nothing) |
+| `triage label --suggest`, 61 rows | `claude-sonnet-5-5`, effort `medium` | $0.67 |
+| `triage review` | none (local) | $0 |
+
+The fixed instructions are cached: from the second issue on, each call reads about 1,600 to
+1,900 cached tokens instead of paying for them in full.
+
 ## Limitations
 
 - Retrieval is keyword-based (BM25) and weak here: the model judged only 22 of 301 excerpts
@@ -374,8 +513,31 @@ duplicate detection. The scorecard measures each one against labels.
 - Only the first comment is fetched, and long issue bodies are cut at 12,000 characters.
 - Prices in `triage.toml` are typed in by hand; check them against Anthropic's pricing page.
 - Drafts are never sent anywhere. The tool only reads from GitHub.
+- The review step is a terminal loop. The optional local web page from the spec was not
+  built.
+- Edit distance is word-level. It shows how much text changed, not whether the change
+  mattered.
+- Review decisions were proposed by Claude and confirmed by Theo, not written from scratch
+  by a person. A Claude reviewer may favour drafts that read like Claude's own, and the v4
+  re-review was proposed by a reviewer who knew what v4 was meant to fix.
+- With the v4 checks, a draft that fails twice is stored as invalid and never reaches
+  review (2 of 20 re-review issues). Prompt v5 should show such drafts with their errors
+  instead of dropping them.
 
 ## How this was built
 
 Written with AI assistance (Claude Code) from the spec in `SPEC.md`, and reviewed by Theo
 O'Ferrall.
+
+- **Labels:** suggested by Claude Sonnet 5.5 (`triage label --suggest`) and confirmed by
+  Theo, either fully by hand or by random spot-check (see "Results").
+- **Review decisions:** proposed by Claude and confirmed by Theo. The v3 review went
+  through `triage review`. The v4 re-review was imported in bulk with a one-off script that
+  uses the same `save()` function as `triage review`. So the approval rates and edit
+  distances measure what Claude proposed and Theo accepted. They are not an independent
+  human rewrite. The work was done in three milestone PRs, each tested with recorded fixtures (no
+network in tests). Theo ran the real runs on his own machine: fetching, triage, labelling
+and evaluation. He reviewed the labels himself and set the rules for `needs_engineer` and
+`type`. Each change of rule became a new prompt version, scored against v1 and v2 on the
+same labels ([eval/CHANGELOG.md](eval/CHANGELOG.md)). Screenshots in `docs/screenshots/`
+are rendered from real terminal output with `scripts/term_svg.py`.

@@ -132,6 +132,24 @@ def cmd_label(args, cfg, conn):
             "until labelled by hand. Next: `triage label --spot-check 15`."
         )
         return 0
+    if args.reopen:
+        from .labels import read_labels, reopen
+
+        numbers = [n.strip().lstrip("#") for n in args.reopen.split(",") if n.strip()]
+        reopen(path, numbers)  # confirmed rows become unconfirmed; others already are
+        known = {r["number"] for r in read_labels(path)}
+        unknown = [n for n in numbers if n not in known]
+        if unknown:
+            print(f"not in {path}: {', '.join(unknown)}")
+        result = label_loop(
+            conn,
+            cfg,
+            path,
+            suggestions_path=suggestions_path,
+            only=[n for n in numbers if n in known],
+        )
+        print(f"checked {result['confirmed']}; {result['remaining']} of these left unconfirmed")
+        return 0
     if args.spot_check:
         from .suggest import save_spot_check, spot_check_sample
 
@@ -210,6 +228,43 @@ def cmd_eval(args, cfg, conn):
         f"wrote {args.out}: {report['n']} labelled issues, type accuracy "
         f"{report['type']['accuracy']:.0%}, area accuracy {report['area']['accuracy']:.0%}"
     )
+    return 0
+
+
+def cmd_review(args, cfg, conn):
+    from .review import export_reviews, review_loop, review_stats, reviewed_numbers
+
+    if args.prompt:
+        cfg.prompt_version = args.prompt
+    if args.like:
+        args.number = reviewed_numbers(conn, cfg.repo, args.like)
+        if not args.number:
+            print(f"no reviews under prompt {args.like} to repeat")
+            return 1
+        args.limit = max(args.limit, len(args.number))
+        print(
+            f"re-review: {cfg.prompt_version} drafts for the {len(args.number)} issues "
+            f"reviewed under {args.like}"
+        )
+    if args.export:
+        n = export_reviews(conn, cfg.repo, Path(args.export))
+        print(f"wrote {n} decisions to {args.export}")
+        return 0
+    if not args.stats:
+        counts = review_loop(conn, cfg, args.limit, numbers=args.number)
+        print(
+            f"approved {counts['approve']}, edited {counts['edit']}, rejected "
+            f"{counts['reject']}, skipped {counts['skipped']}"
+        )
+    st = review_stats(conn, cfg.repo, cfg.model, cfg.prompt_version)
+    if st["n"]:
+        dist = st["mean_edit_distance_edited"]
+        print(
+            f"all reviews for {cfg.model} {cfg.prompt_version}: {st['n']} drafts, "
+            f"{st['approved']} approved as is ({st['approval_rate']:.0%}), {st['edited']} "
+            f"edited, {st['rejected']} rejected; mean edit distance of edited drafts "
+            + ("–" if dist is None else f"{dist:.2f}")
+        )
     return 0
 
 
@@ -323,6 +378,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--sample-seed", type=int, default=1, help="random seed for --spot-check (default 1)"
     )
     lb.add_argument(
+        "--reopen", metavar="N,N,...", help="check exactly these rows again, confirmed or not"
+    )
+    lb.add_argument(
         "--stats", action="store_true", help="how many suggestions were changed by hand"
     )
     lb.add_argument(
@@ -340,6 +398,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--unconfirmed", action="store_true", help="also score rows Theo has not confirmed"
     )
     ev.set_defaults(func=cmd_eval)
+
+    rv = sub.add_parser("review", help="approve, edit or reject drafts (nothing is posted)")
+    rv.add_argument("--limit", type=int, default=20)
+    rv.add_argument("--number", type=int, action="append", help="review this issue (repeatable)")
+    rv.add_argument("--prompt", help="prompt version whose drafts to review")
+    rv.add_argument(
+        "--like", metavar="VERSION", help="review only issues already reviewed under VERSION"
+    )
+    rv.add_argument("--stats", action="store_true", help="only print the review numbers")
+    rv.add_argument("--export", metavar="CSV", help="write every decision to a CSV file")
+    rv.set_defaults(func=cmd_review)
 
     s = sub.add_parser("show", help="print stored triage records")
     s.add_argument("--limit", type=int, default=20)

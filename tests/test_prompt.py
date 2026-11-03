@@ -96,3 +96,19 @@ def test_prompt_versions():
     assert "relevant_docs" in build_tool(AREAS, "v2")["input_schema"]["required"]
     with pytest.raises(ValueError):
         build_system_prompt("r", AREAS, "v9")
+
+
+def test_v3_type_rule_for_single_project_issues():
+    v2 = build_system_prompt("r", AREAS, "v2")
+    v3 = build_system_prompt("r", AREAS, "v3")
+    assert "A technical problem on one project is never `other`." in v3
+    assert "restricted or\n  paused project, quotas, plans" in v3
+    assert "spam, meta discussion" in v2 and "spam, meta discussion" not in v3
+    # everything else from v2 is unchanged
+    assert (
+        v3.split("feature: a request")[1].split("area:")[1]
+        == v2.split("feature: a request")[1].split("area:")[1]
+    )
+    # examples must not describe issues from the labelled eval set
+    for leak in ("PGRST303", "pooler", "freshly issued tokens", "custom database role"):
+        assert leak not in v3

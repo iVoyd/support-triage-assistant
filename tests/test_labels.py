@@ -188,3 +188,48 @@ def test_reseed_fills_unknown_targets_in_unconfirmed_rows(conn, cfg, tmp_path):
     write_labels(path, list(rows.values()))
     seed_labels(conn, cfg, path, 2, found)
     assert {r["number"]: r["duplicate_of"] for r in read_labels(path)}["52547"] == ""
+
+
+def test_reopen_and_spot_checked_rows_keep_their_source(conn, cfg, tmp_path):
+    from triage.labels import reopen, write_labels
+
+    path = tmp_path / "labels.csv"
+    write_labels(
+        path,
+        [
+            {
+                "number": "1",
+                "type": "other",
+                "area": "auth",
+                "needs_engineer": "no",
+                "confirmed": "yes",
+                "source": "spot-checked",
+            },
+            {
+                "number": "2",
+                "type": "bug",
+                "area": "auth",
+                "needs_engineer": "no",
+                "confirmed": "yes",
+                "source": "hand",
+            },
+        ],
+    )
+    assert reopen(path, ["1", "3"]) == ["1"]
+    answers = iter(["t=q"])
+    label_loop(conn, cfg, path, ask=lambda _: next(answers), out=lambda m: None)
+    row = {r["number"]: r for r in read_labels(path)}["1"]
+    assert (row["type"], row["confirmed"], row["source"]) == ("question", "yes", "spot-checked")
+
+
+def test_saved_spot_check_sample_is_reused(tmp_path):
+    import json
+
+    from triage.labels import write_labels
+    from triage.suggest import spot_check_sample
+
+    path = tmp_path / "labels.csv"
+    write_labels(path, [{"number": str(n), "source": "suggested"} for n in range(10)])
+    (tmp_path / "spot_check.json").write_text(json.dumps({"seed": 1, "sample": ["7", "2"]}))
+    assert spot_check_sample(path, 2, 1) == ["7", "2"]
+    assert spot_check_sample(path, 3, 1) != ["7", "2"]  # different size: drawn fresh

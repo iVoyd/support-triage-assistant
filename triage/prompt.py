@@ -94,8 +94,51 @@ URLs listed here.
 confidence: 0.0 to 1.0""",
     )
 )
-PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2}
-DEFAULT_VERSION = "v2"
+# v3 (see eval/CHANGELOG.md): types follow Theo's rule for single-project issues. `other`
+# is only for account or billing matters that support alone can act on.
+OLD_TYPES = """\
+- bug: something that used to work, or is documented to work, and does not.
+- question: the reporter needs help using the product; nothing is broken.
+- feature: a request for new behaviour or an enhancement.
+- docs: the documentation is missing, wrong or unclear.
+"""
+NEW_TYPES = """\
+- bug: something that used to work, or is documented to work, and does not. This includes a
+  problem on one project when the evidence points to a product defect (for example, a
+  hosted service rejecting requests that the docs say are valid).
+- question: the reporter needs help with setup or usage. This includes a technical problem
+  on one project that is not shown to be a product defect (for example, getting a
+  connection or configuration setting to work).
+- feature: a request for new behaviour or an enhancement.
+- docs: the documentation is missing, wrong or unclear.
+- other: account or billing matters that only the support team can act on: a restricted or
+  paused project, quotas, plans, signing in to the Supabase dashboard or account. Also spam
+  and empty issue templates. A technical problem on one project is never `other`.
+"""
+SYSTEM_V3 = SYSTEM_V2.replace(
+    OLD_TYPES + "- other: spam, meta discussion, or anything that fits none of the above.\n",
+    NEW_TYPES,
+)
+# v4 (see eval/CHANGELOG.md): the five kinds of edit Theo made most in his first review.
+V4_DRAFT_RULES = """\
+Before asking for anything, read the issue body and first comment again. Never ask for
+information the reporter already gave (versions, error messages, logs, steps, project
+details); ask only for what is missing, or for nothing.
+Write as the maintainer, about the reporter's problem. Never mention your own inputs: no
+"the documentation provided", "the excerpts", "the docs I have", "based on what I was given".
+If you point to a docs page, include its full URL in the reply. Never refer to a link, guide
+or page ("see the link below", "this guide") without the URL.
+If a likely duplicate is given with the issue, say so and name it by number (for example
+"This looks like the same problem as #123"), so the discussion can continue there.
+"""
+SYSTEM_V4 = SYSTEM_V3.replace(
+    "confirmed or started working on anything, and do not commit the team to looking into it.\n",
+    "confirmed or started working on anything, and do not commit the team to looking into it.\n"
+    "Do not say you labelled, tagged, assigned, closed or moved the issue either.\n"
+    + V4_DRAFT_RULES,
+)
+PROMPTS = {"v1": SYSTEM_V1, "v2": SYSTEM_V2, "v3": SYSTEM_V3, "v4": SYSTEM_V4}
+DEFAULT_VERSION = "v4"
 
 
 def format_areas(areas: dict[str, str]) -> str:
@@ -152,8 +195,12 @@ def _cut(text: str, limit: int) -> str:
     return text[:limit] + f"\n[... cut: {len(text) - limit} more characters not shown]"
 
 
-def build_user_message(issue: dict, chunks: list[Chunk]) -> str:
-    """Per-issue content. GitHub labels are left out on purpose: they are eval ground truth."""
+def build_user_message(issue: dict, chunks: list[Chunk], duplicate: dict | None = None) -> str:
+    """Per-issue content. GitHub labels are left out on purpose: they are eval ground truth.
+
+    `duplicate` ({number, title, reason}) is the duplicate check's confirmed verdict; only
+    prompt v4 and later pass it.
+    """
     parts = [
         f'<issue number="{issue["number"]}" state="{issue.get("state") or ""}">',
         f"<title>{issue['title']}</title>",
@@ -164,6 +211,11 @@ def build_user_message(issue: dict, chunks: list[Chunk]) -> str:
             f"<first_comment>\n{_cut(issue['first_comment'], MAX_COMMENT_CHARS)}\n</first_comment>"
         )
     parts.append("</issue>")
+    if duplicate:
+        parts.append(
+            f'<likely_duplicate number="{duplicate["number"]}" title="{duplicate["title"]}">\n'
+            f"{duplicate['reason']}\n</likely_duplicate>"
+        )
     parts.append("<documentation>")
     if not chunks:
         parts.append("(no relevant documentation found)")
@@ -175,6 +227,11 @@ def build_user_message(issue: dict, chunks: list[Chunk]) -> str:
     parts.append("</documentation>")
     parts.append(f"Triage this issue by calling {TOOL_NAME}.")
     return "\n".join(parts)
+
+
+def uses_duplicates(version: str) -> bool:
+    """Prompt v4 and later see the duplicate check's verdict."""
+    return version not in ("v1", "v2", "v3")
 
 
 def retrieval_query(issue: dict) -> str:
@@ -191,6 +248,7 @@ def build_request(
     issue: dict,
     chunks: list[Chunk],
     version: str = DEFAULT_VERSION,
+    duplicate: dict | None = None,
 ) -> dict:
     """Keyword arguments for client.messages.create.
 
@@ -210,5 +268,12 @@ def build_request(
                 "cache_control": {"type": "ephemeral"},
             }
         ],
-        "messages": [{"role": "user", "content": build_user_message(issue, chunks)}],
+        "messages": [
+            {
+                "role": "user",
+                "content": build_user_message(
+                    issue, chunks, duplicate if uses_duplicates(version) else None
+                ),
+            }
+        ],
     }

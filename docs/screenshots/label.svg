@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="890" height="294" viewBox="0 0 890 294" role="img" aria-label="triage label (real run on Theo&#x27;s machine, 2026-11-03)">
+<rect width="890" height="294" rx="8" fill="#1e1e1e"/>
+<circle cx="18" cy="16" r="5" fill="#ff5f56"/><circle cx="36" cy="16" r="5" fill="#ffbd2e"/><circle cx="54" cy="16" r="5" fill="#27c93f"/>
+<text x="445.0" y="20" fill="#9a9a9a" font-family="monospace" font-size="12" text-anchor="middle">triage label (real run on Theo&#x27;s machine, 2026-11-03)</text>
+<g font-family="DejaVu Sans Mono, Menlo, Consolas, monospace" font-size="13" fill="#d4d4d4" xml:space="preserve" style="white-space: pre">
+<text x="16" y="57" fill="#7ec699">$ triage label --spot-check 15</text>
+<text x="16" y="75">spot-checking a random 15 (seed 1): #45520 #52304 #43231 #51893 #44130 #52263 #52222 ...</text>
+<text x="16" y="93"></text>
+<text x="16" y="111">#52222 Urgent: Supabase Project Restricted – Storage Quota Exceeded</text>
+<text x="16" y="129">  https://github.com/supabase/supabase/issues/52222  [closed/completed]  labels: bug, external-issue, to-tria…</text>
+<text x="16" y="147">  Hi, thank you for your response. I have already emailed support@supabase.com regarding my project ...</text>
+<text x="16" y="165">  -&gt; type=other area=platform engineer=no duplicate_of=52219 doc_url=-  (seed: github labels: bug)</text>
+<text x="16" y="183">  suggested by claude-sonnet-5-5 (check it):</text>
+<text x="16" y="201">    type=other: This is a support request about one specific account&#x27;s restricted project, not a product defe…</text>
+<text x="16" y="219">    area=platform: The project is restricted for exceeding the storage quota, which is a hosted-platform limi…</text>
+<text x="16" y="237">    engineer=False: Support staff handle account-specific restrictions through the support@supabase.com chann…</text>
+<text x="16" y="255">    duplicate_of=52219: Issue 52219 is an earlier report for the same project (uvwarprsghwvrfmdaaqv) with the…</text>
+<text x="16" y="273">  &gt; </text>
+</g>
+</svg>

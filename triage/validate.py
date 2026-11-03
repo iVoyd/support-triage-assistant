@@ -17,6 +17,28 @@ CLAIMED_ACTION = re.compile(
     r"|\bwe(?:'ll| will) (?:look into|investigate|fix|follow up)\b",
     re.IGNORECASE,
 )
+# v4 only (so older versions stay reproducible): more claimed actions, talk about the
+# model's own inputs, and pointing at a link without giving it.
+CLAIMED_ACTION_V4 = re.compile(
+    CLAIMED_ACTION.pattern
+    + r"|\b(?:I|we)(?:'ve| have)? (?:labell?ed|tagged|assigned|closed|marked|moved|triaged)\b"
+    + r"|\b(?:I|we)(?:'ve| have) added (?:a |the )?label",
+    re.IGNORECASE,
+)
+INPUT_TALK = re.compile(
+    r"\b(?:docs|documentation|excerpts?|sources?) (?:provided|given|I (?:have|was given|can see)"
+    r"|available to me)\b"
+    r"|\b(?:the |these )?(?:provided|given) (?:docs|documentation|excerpts?)\b"
+    r"|\bexcerpts?\b"
+    r"|\bI (?:don't|do not) have (?:any )?(?:docs|documentation)\b",
+    re.IGNORECASE,
+)
+DANGLING_LINK = re.compile(
+    r"\blink(?:ed)? (?:below|above)\b|\bthe following (?:link|guide|page|docs?)\b"
+    r"|\b(?:see|check|read) (?:this|that) (?:guide|page|doc|link)\b"
+    r"|\bhere(?:'s| is) (?:the|a) (?:link|guide|doc)\b|\blinked (?:guide|page|doc)",
+    re.IGNORECASE,
+)
 FIELDS = [
     "type",
     "area",
@@ -47,7 +69,11 @@ def _norm(url: str) -> str:
 
 
 def validate_output(
-    data: dict, areas: list[str], allowed_urls: list[str], version: str = "v2"
+    data: dict,
+    areas: list[str],
+    allowed_urls: list[str],
+    version: str = "v2",
+    duplicate: int | None = None,
 ) -> list[str]:
     """Return a list of human-readable problems. Empty list means valid.
 
@@ -79,12 +105,29 @@ def validate_output(
         errors.append(f"summary must be at most 3 sentences, got {count_sentences(summary)}")
     if not str(data["draft_reply"]).strip():
         errors.append("draft_reply must not be empty")
+    v4 = version not in ("v1", "v2", "v3")
+    draft = str(data["draft_reply"])
     if version != "v1":
-        claims = sorted({m.group(0) for m in CLAIMED_ACTION.finditer(data["draft_reply"])})
+        pattern = CLAIMED_ACTION_V4 if v4 else CLAIMED_ACTION
+        claims = sorted({m.group(0) for m in pattern.finditer(draft)})
         if claims:
             errors.append(
                 "draft_reply claims an action nobody has taken (" + "; ".join(claims) + "); "
                 "describe only what is true now"
+            )
+    if v4:
+        talk = sorted({m.group(0) for m in INPUT_TALK.finditer(draft)})
+        if talk:
+            errors.append(
+                "draft_reply talks about your inputs (" + "; ".join(talk) + "); write about "
+                "the reporter's problem and cite docs by URL only"
+            )
+        if DANGLING_LINK.search(draft) and not urls_in(draft):
+            errors.append("draft_reply refers to a link or guide but gives no URL")
+        if duplicate and not re.search(rf"#?\b{duplicate}\b", draft):
+            errors.append(
+                f"a likely duplicate (#{duplicate}) was given; say so in draft_reply and "
+                "name it by number"
             )
     allowed = {_norm(u) for u in allowed_urls}
     if version != "v1":
