@@ -1,0 +1,37 @@
+{
+  "id": "msg_02",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EqQBCkgIAxABGAIiQK..."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_02",
+      "name": "record_triage",
+      "input": {
+        "type": "bug",
+        "area": "auth",
+        "severity": "medium",
+        "needs_engineer": true,
+        "needs_engineer_reason": "Confirmed users should be able to sign in; this may be a regression in supabase-js 2.45.1.",
+        "summary": "One. Two. Three. Four.",
+        "draft_reply": "See https://example.com/made-up-page for details.",
+        "confidence": 0.78
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "stop_details": null,
+  "usage": {
+    "input_tokens": 900,
+    "output_tokens": 350,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1450
+  }
+}

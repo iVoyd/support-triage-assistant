@@ -24,3 +24,19 @@ def conn():
 @pytest.fixture
 def cfg():
     return load_config(ROOT / "triage.toml")
+
+
+class FakeAnthropic:
+    """Stands in for anthropic.Anthropic(): replays recorded Message fixtures in order
+    and records every request it receives."""
+
+    def __init__(self, *fixture_names: str):
+        from anthropic.types import Message
+
+        self.replies = [Message.model_validate(load_fixture(n)) for n in fixture_names]
+        self.requests: list[dict] = []
+        self.messages = self
+
+    def create(self, **kwargs):
+        self.requests.append(kwargs)
+        return self.replies.pop(0)
