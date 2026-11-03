@@ -133,15 +133,22 @@ def cmd_label(args, cfg, conn):
         )
         return 0
     if args.reopen:
-        from .labels import reopen
+        from .labels import read_labels, reopen
 
         numbers = [n.strip().lstrip("#") for n in args.reopen.split(",") if n.strip()]
-        found = reopen(path, numbers)
-        missing_ = sorted(set(numbers) - set(found))
-        print(
-            f"reopened {len(found)} rows; run `triage label` to check them again"
-            + (f" (not found or not confirmed: {', '.join(missing_)})" if missing_ else "")
+        reopen(path, numbers)  # confirmed rows become unconfirmed; others already are
+        known = {r["number"] for r in read_labels(path)}
+        unknown = [n for n in numbers if n not in known]
+        if unknown:
+            print(f"not in {path}: {', '.join(unknown)}")
+        result = label_loop(
+            conn,
+            cfg,
+            path,
+            suggestions_path=suggestions_path,
+            only=[n for n in numbers if n in known],
         )
+        print(f"checked {result['confirmed']}; {result['remaining']} of these left unconfirmed")
         return 0
     if args.spot_check:
         from .suggest import save_spot_check, spot_check_sample
@@ -361,7 +368,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--sample-seed", type=int, default=1, help="random seed for --spot-check (default 1)"
     )
     lb.add_argument(
-        "--reopen", metavar="N,N,...", help="mark these confirmed rows for checking again"
+        "--reopen", metavar="N,N,...", help="check exactly these rows again, confirmed or not"
     )
     lb.add_argument(
         "--stats", action="store_true", help="how many suggestions were changed by hand"
