@@ -99,6 +99,8 @@ def test_seed_labels_puts_duplicates_and_triaged_first_and_keeps_existing(conn, 
 
     write_labels(path, rows)
     assert seed_labels(conn, cfg, path, 7, found) == (5, 2)
+    assert seed_labels(conn, cfg, path, 7, found) == (7, 0)  # at target: adds nothing
+    assert seed_labels(conn, cfg, path, 5, found) == (7, 0)  # above target: adds nothing
     again = {r["number"]: r for r in read_labels(path)}
     assert again[rows[0]["number"]]["notes"] == "checked"
 

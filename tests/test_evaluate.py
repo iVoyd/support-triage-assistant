@@ -42,10 +42,23 @@ def test_agreement_shows_over_flagging():
 
 
 def test_duplicate_scores():
-    res = duplicate_scores([(52546, 52546), (None, 7), (None, None), (5, None)])
+    res = duplicate_scores([({52546}, 52546), (set(), 7), (set(), None), ({5}, None)])
     assert res["precision_at_1"] == 0.5  # 2 flagged, 1 right
     assert res["recall"] == 0.5  # 2 labelled, 1 found
-    assert duplicate_scores([(None, None)])["precision_at_1"] is None
+    assert duplicate_scores([(set(), None)])["precision_at_1"] is None
+
+
+def test_duplicate_groups_are_undirected_and_transitive():
+    from triage.evaluate import duplicate_groups, gold_duplicates
+
+    # Theo labelled the older 52550 as a duplicate of the newer 52636
+    groups = duplicate_groups([(52550, 52636), (43230, 43142), (43231, 43142)])
+    assert gold_duplicates(52636, groups) == {52550}  # the checker can find this
+    assert gold_duplicates(52550, groups) == set()  # nothing older to find
+    # two duplicates of one issue are duplicates of each other
+    assert gold_duplicates(43231, groups) == {43142, 43230}
+    assert gold_duplicates(43142, groups) == set()
+    assert gold_duplicates(1, groups) == set()
 
 
 def rec(number, retrieved, scores=None, relevant=None):

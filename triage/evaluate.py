@@ -56,22 +56,55 @@ def agreement(pairs: list[tuple[bool, bool]]) -> dict:
     }
 
 
-def duplicate_scores(pairs: list[tuple[int | None, int | None]]) -> dict:
-    """pairs are (labelled duplicate_of, predicted top duplicate), None meaning "none".
+def duplicate_groups(links: list[tuple[int, int]]) -> dict[int, set[int]]:
+    """Group issues joined by duplicate labels, in either direction and transitively.
+
+    A label "52550 duplicate_of 52636" and "52636 duplicate_of 52550" mean the same thing,
+    and two issues that both duplicate a third are duplicates of each other.
+    """
+    parent: dict[int, int] = {}
+
+    def find(x: int) -> int:
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b in links:
+        parent[find(a)] = find(b)
+    groups: dict[int, set[int]] = {}
+    for x in list(parent):
+        groups.setdefault(find(x), set()).add(x)
+    return {x: groups[find(x)] for x in parent}
+
+
+def gold_duplicates(number: int, groups: dict[int, set[int]]) -> set[int]:
+    """What the checker can be right about: older issues in the same group.
+
+    The checker only compares an issue with older ones, so for the oldest issue of a group
+    the right answer is "no duplicate".
+    """
+    return {m for m in groups.get(number, set()) if m < number}
+
+
+def duplicate_scores(pairs: list[tuple[set[int], int | None]]) -> dict:
+    """pairs are (correct answers, predicted top duplicate); an empty set means "none".
 
     precision@1: of the issues where the system named a duplicate, how often its top pick
-    is the labelled one. recall: of the labelled duplicates, how many were found.
+    is one of the correct answers. recall: of the issues that have a correct answer, how
+    many the system found.
     """
     predicted = [(g, p) for g, p in pairs if p is not None]
-    positives = [(g, p) for g, p in pairs if g is not None]
+    positives = [(g, p) for g, p in pairs if g]
     return {
         "n": len(pairs),
         "labelled_duplicates": len(positives),
         "predicted_duplicates": len(predicted),
         "precision_at_1": (
-            sum(1 for g, p in predicted if g == p) / len(predicted) if predicted else None
+            sum(1 for g, p in predicted if p in g) / len(predicted) if predicted else None
         ),
-        "recall": sum(1 for g, p in positives if g == p) / len(positives) if positives else None,
+        "recall": sum(1 for g, p in positives if p in g) / len(positives) if positives else None,
     }
 
 
@@ -225,12 +258,18 @@ def evaluate(
         for r in scored
         if r["needs_engineer"] in ("yes", "no")
     ]
+    # links from every usable label, so a pair labelled on either side counts for both
+    groups = duplicate_groups(
+        [(int(r["number"]), int(r["duplicate_of"])) for r in rows if r["duplicate_of"].isdigit()]
+    )
     dup_pairs = []
     for r in scored:
         if r["duplicate_of"] == "?":
             continue
-        gold = int(r["duplicate_of"]) if r["duplicate_of"] else None
-        dup_pairs.append((gold, top_duplicate(conn, cfg.repo, int(r["number"]), cfg.model)))
+        number = int(r["number"])
+        dup_pairs.append(
+            (gold_duplicates(number, groups), top_duplicate(conn, cfg.repo, number, cfg.model))
+        )
     recs = [records[int(r["number"])] for r in scored]
     doc_labels = {int(r["number"]): r["doc_url"] for r in scored if r["doc_url"]}
     marks = ",".join("?" * len(numbers))

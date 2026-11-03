@@ -188,6 +188,12 @@ This triages and duplicate-checks the labelled issues that need it (about 60 iss
 under a tenth of a cent each), then writes `eval/SCORECARD.md`. To compare prompts on the
 same labels, run `triage eval --prompt v1 --out eval/SCORECARD-v1.md` as well.
 
+Duplicate labels are read as groups. "A is a duplicate of B" and "B is a duplicate of A"
+mean the same thing, and two duplicates of one issue are duplicates of each other. Because
+the checker only compares an issue with older ones, an answer counts as right when it names
+any older issue in the same group. For the oldest issue in a group, the right answer is
+"no duplicate".
+
 ### Another project
 
 Edit `triage.toml`: `[project].repo`, the `[docs]` source/subdir/url_base, and the

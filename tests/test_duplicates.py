@@ -1,6 +1,9 @@
 """Duplicate detection with real titles from supabase/supabase (bodies are paraphrased).
 
 52547 was closed as a duplicate of 52546: same title, same report.
+52565 and 52541 both report PGRST303. The recorded model reply calls them different; Theo's
+label says they are duplicates, so on real data the scorecard would count that as a miss.
+These tests check the mechanism, not who is right.
 """
 
 import json
@@ -59,7 +62,7 @@ def test_validate_requires_one_entry_per_candidate():
     assert validate({"candidates": [{"number": 1, "same_problem": "no", "reason": ""}]}, [1])
 
 
-def test_run_confirms_duplicate_and_rejects_near_miss(conn, cfg):
+def test_run_records_confirmed_and_rejected_candidates(conn, cfg):
     store(conn, cfg.repo)
     client = FakeAnthropic("claude_dup_no.json", "claude_dup_yes.json")  # newest first
     totals = run_duplicates(conn, cfg, client, 20, numbers=[52547, 52565], log=lambda m: None)

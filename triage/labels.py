@@ -184,14 +184,14 @@ def seed_labels(
     must = [*duplicates, *targets, *triaged]
     new = []
     for issue in select_issues(conn, cfg, n + len(have), must):
+        if len(existing) + len(new) >= n:  # already at the target size: add nothing
+            break
         if issue["number"] in have:
             continue
         dup = duplicates.get(issue["number"], "")
         if not dup and issue.get("state_reason") == "duplicate":
             dup = "?"
         new.append(seed_row(issue, cfg, dup))
-        if len(existing) + len(new) >= n:
-            break
     write_labels(path, existing + new)
     return len(existing), len(new)
 
