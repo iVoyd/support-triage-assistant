@@ -129,7 +129,7 @@ Load the API key. A GitHub token is optional but recommended: without one GitHub
 requests an hour, and fetching first comments takes one request per commented issue.
 
 ```bash
-set -a; . ~/.config/job_radar/env; set +a
+export ANTHROPIC_API_KEY="sk-ant-..."   # or source your own env file; never commit it
 ```
 
 ```bash
