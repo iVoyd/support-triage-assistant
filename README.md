@@ -511,8 +511,8 @@ The fixed instructions are cached: from the second issue on, each call reads abo
 - The label guide and the triage prompt define `other` differently (account-specific
   support requests), which holds type accuracy down until one of them changes.
 - v2 slightly under-flags `needs_engineer` (48% vs 58% in the labels).
-- Half the labels are accepted model suggestions; a random spot-check of 15 puts their
-  error rate at 7% (95% interval 1–30%).
+- 20 of the 62 labels are model suggestions accepted without a check; a random spot-check
+  of 15 others found 2 wrong, an estimated error rate of 13% (95% interval 4–38%).
 - The claimed-action check is a list of phrases, so new wordings can slip through.
 - Duplicate detection only compares against issues already in the database (the newest
   300 plus the seeded duplicate examples), and TF-IDF misses duplicates described in
